@@ -1,0 +1,386 @@
+{
+  "schemaVersion": "1",
+  "startedAt": "2026-10-29T00:00:00.000Z",
+  "completedAt": "2026-10-29T00:00:00.000Z",
+  "target": "https://theplacencia.com/adventures",
+  "crawlSettings": {
+    "policy": {
+      "maxPages": 1,
+      "maxRequests": 100,
+      "maxRuntimeMs": 10000,
+      "maxResponseBytes": 200000,
+      "maxTotalResponseBytes": 4000000,
+      "minRequestIntervalMs": 0,
+      "maxConcurrency": 1,
+      "maxRetries": 0,
+      "retryBaseDelayMs": 1000,
+      "retryMaxDelayMs": 30000,
+      "retryAfterMaxDelayMs": 120000,
+      "maxImageChecks": 0,
+      "largeImageThresholdBytes": 500000,
+      "allowedHosts": [
+        "theplacencia.com"
+      ],
+      "robots": "observation-only"
+    },
+    "userAgent": "webcrawl/0.1",
+    "renderBrowser": false,
+    "retainHtml": false,
+    "enrichments": [
+      "contacts"
+    ]
+  },
+  "crawl": {
+    "discovered": 2,
+    "attempted": 1,
+    "physicalRequests": 2,
+    "captured": 1,
+    "failed": 0,
+    "skipped": 0,
+    "unattempted": 1,
+    "limitations": [
+      "crawl_budget_or_frontier_limit",
+      "page_limit",
+      "unattempted_page_urls"
+    ]
+  },
+  "coverage": {
+    "urls": [
+      {
+        "url": "https://theplacencia.com/adventures",
+        "finalUrl": "https://theplacencia.com/adventures",
+        "statusCode": 200,
+        "outcome": "captured",
+        "redirectChain": []
+      },
+      {
+        "url": "https://theplacencia.com/adventures/more",
+        "outcome": "unattempted",
+        "reason": "page_limit"
+      }
+    ],
+    "checks": {
+      "internalLinks": {
+        "status": "partial",
+        "scope": "same_host",
+        "discovered": 1,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 1,
+        "outOfScope": 0
+      },
+      "imageSizes": {
+        "status": "disabled",
+        "scope": "same_host",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0,
+        "outOfScope": 0,
+        "thresholdBytes": 500000
+      },
+      "securityHeaders": {
+        "status": "partial",
+        "discovered": 2,
+        "checked": 1,
+        "findings": 5,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 1
+      },
+      "mixedContent": {
+        "status": "partial",
+        "discovered": 2,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 1
+      },
+      "sensitiveForms": {
+        "status": "partial",
+        "discovered": 2,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 1
+      },
+      "cookieAttributes": {
+        "status": "partial",
+        "discovered": 2,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 1
+      },
+      "securityTxt": {
+        "status": "disabled",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      }
+    },
+    "findings": {
+      "records": 9,
+      "checkCodes": 9,
+      "affectedPages": 1,
+      "evidenceOccurrences": 9,
+      "byCheck": [
+        {
+          "code": "hsts_missing_or_inactive",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_canonical",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_content_security_policy",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_frame_protection",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_h1",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_meta_description",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_nosniff_header",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_referrer_policy",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_viewport",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        }
+      ]
+    }
+  },
+  "capabilities": {
+    "http": "partial",
+    "robots": "complete",
+    "technicalSeo": "partial",
+    "browser": "disabled",
+    "pagespeed": "disabled",
+    "contacts": "partial",
+    "technology": "disabled",
+    "images": "disabled",
+    "brokenLinks": "partial",
+    "imageSize": "disabled",
+    "securityTxt": "disabled"
+  },
+  "contacts": {
+    "profile": "contacts-v12-whatsapp-source-review",
+    "status": "partial",
+    "coverage": {
+      "capturedHtmlPages": 1,
+      "inspectedPages": 1,
+      "pagesWithNoCandidates": 1,
+      "uninspectedPages": 1,
+      "knownContactPagesUncaptured": [],
+      "knownContactPagesOmitted": 0,
+      "incompleteDiscoveryPages": 0,
+      "acceptedEmails": 0,
+      "acceptedPhones": 0,
+      "rejectedValues": 0,
+      "mergedOccurrences": 0,
+      "retainedSources": 0,
+      "omittedCandidates": 0,
+      "untrackedCandidateOverflowOccurrences": 0,
+      "omittedSources": 0,
+      "omittedRawVariants": 0,
+      "truncatedHtmlPages": 0,
+      "omittedPageCandidates": 0,
+      "omittedTraversalNodes": 0,
+      "omittedJsonLdValues": 0,
+      "omittedVisibleText": 0,
+      "unresolvedWhatsAppLinks": 0,
+      "omittedWhatsAppLinks": 0
+    },
+    "candidates": [],
+    "unresolvedWhatsApp": [],
+    "suggestedPrimary": {
+      "email": null,
+      "phone": null
+    }
+  },
+  "findings": [
+    {
+      "code": "hsts_missing_or_inactive",
+      "category": "security",
+      "observed": "HTTPS response has no active HSTS max-age directive.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "Strict-Transport-Security"
+        }
+      ]
+    },
+    {
+      "code": "missing_nosniff_header",
+      "category": "security",
+      "observed": "X-Content-Type-Options is missing or is not set to nosniff.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "X-Content-Type-Options"
+        }
+      ]
+    },
+    {
+      "code": "missing_referrer_policy",
+      "category": "security",
+      "observed": "No Referrer-Policy response header was found.",
+      "severity": "informational",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "Referrer-Policy"
+        }
+      ]
+    },
+    {
+      "code": "missing_content_security_policy",
+      "category": "security",
+      "observed": "No Content-Security-Policy response header was found.",
+      "severity": "informational",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "Content-Security-Policy"
+        }
+      ]
+    },
+    {
+      "code": "missing_frame_protection",
+      "category": "security",
+      "observed": "No restrictive CSP frame-ancestors directive or effective X-Frame-Options header was found.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "frame-ancestors / X-Frame-Options"
+        }
+      ]
+    },
+    {
+      "code": "missing_meta_description",
+      "category": "metadata",
+      "observed": "No meta description was found.",
+      "severity": "medium",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http"
+        }
+      ]
+    },
+    {
+      "code": "missing_h1",
+      "category": "content",
+      "observed": "No H1 heading was found.",
+      "severity": "medium",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http"
+        }
+      ]
+    },
+    {
+      "code": "missing_viewport",
+      "category": "metadata",
+      "observed": "No non-empty viewport meta element was found.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http"
+        }
+      ]
+    },
+    {
+      "code": "missing_canonical",
+      "category": "indexability",
+      "observed": "No canonical link element was found.",
+      "severity": "informational",
+      "evidence": [
+        {
+          "pageUrl": "https://theplacencia.com/adventures",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http"
+        }
+      ]
+    }
+  ],
+  "robotsObservation": {
+    "policy": "observation-only",
+    "revision": "robots-observation-only-v1",
+    "retrieval": "missing",
+    "crawlerUserAgent": "webcrawl/0.1",
+    "googlebotEvaluation": "NOT_VERIFIED",
+    "knownDiscoveredUrls": 2,
+    "advisoryAllowed": 2,
+    "advisoryDisallowed": 0,
+    "advisoryUnknown": 0,
+    "capturedDisallowedCount": 0,
+    "capturedDisallowedSamples": [],
+    "omittedCapturedDisallowedSamples": 0
+  }
+}

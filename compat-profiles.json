@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "defaultProfile": "default",
+  "profiles": {
+    "default": {
+      "description": "School capture with PSI, PDF reports, and configurable retries.",
+      "pages": 500,
+      "requests": 2500,
+      "runtime-ms": 900000,
+      "response-bytes": 20000000,
+      "total-bytes": 100000000,
+      "concurrency": 3,
+      "interval-ms": 500,
+      "retries": 10,
+      "image-checks": 200,
+      "large-image-bytes": 500000,
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0",
+      "locale": "en",
+      "pdf-locale": "en",
+      "pagespeed": true,
+      "pagespeed-include-query": false,
+      "pdf": true,
+      "browser": false,
+      "contacts": true,
+      "technology": true,
+      "images": true,
+      "security-txt": false,
+      "evidence-pack": false,
+      "page-data": false,
+      "page-data-html": false,
+      "progress": true,
+      "respect-robots": false
+    },
+    "fast": {
+      "extends": "default",
+      "description": "School capture with a shorter request-start interval.",
+      "interval-ms": 200
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# Dependencies and generated output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local evidence, operator state, and browser profiles
+.workproof/
+.local-review/
+.state/
+state/
+profile/
+private/
+runs/
+
+# Credentials and local issuer identity
+.env
+.env.*
+.report-contact.json
+*.pem
+*.key
+
+# Local logs and editor/OS files
+*.log
+.DS_Store
+.idea/
+.vscode/

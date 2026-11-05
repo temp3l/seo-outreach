@@ -1,0 +1,402 @@
+{
+  "schemaVersion": "1",
+  "startedAt": "2026-10-29T00:00:00.000Z",
+  "completedAt": "2026-10-29T00:00:00.000Z",
+  "target": "https://ckc.example/",
+  "crawlSettings": {
+    "policy": {
+      "maxPages": 20,
+      "maxRequests": 100,
+      "maxRuntimeMs": 10000,
+      "maxResponseBytes": 200000,
+      "maxTotalResponseBytes": 4000000,
+      "minRequestIntervalMs": 0,
+      "maxConcurrency": 1,
+      "maxRetries": 0,
+      "retryBaseDelayMs": 1000,
+      "retryMaxDelayMs": 30000,
+      "retryAfterMaxDelayMs": 120000,
+      "maxImageChecks": 0,
+      "largeImageThresholdBytes": 500000,
+      "allowedHosts": [
+        "ckc.example"
+      ],
+      "robots": "observation-only"
+    },
+    "userAgent": "webcrawl/0.1",
+    "renderBrowser": false,
+    "retainHtml": false,
+    "enrichments": [
+      "contacts"
+    ]
+  },
+  "crawl": {
+    "discovered": 1,
+    "attempted": 1,
+    "physicalRequests": 2,
+    "captured": 1,
+    "failed": 0,
+    "skipped": 0,
+    "unattempted": 0,
+    "limitations": []
+  },
+  "coverage": {
+    "urls": [
+      {
+        "url": "https://ckc.example/",
+        "finalUrl": "https://ckc.example/",
+        "statusCode": 200,
+        "outcome": "captured",
+        "redirectChain": []
+      }
+    ],
+    "checks": {
+      "internalLinks": {
+        "status": "complete",
+        "scope": "same_host",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0,
+        "outOfScope": 1
+      },
+      "imageSizes": {
+        "status": "disabled",
+        "scope": "same_host",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0,
+        "outOfScope": 0,
+        "thresholdBytes": 500000
+      },
+      "securityHeaders": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 5,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "mixedContent": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "sensitiveForms": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "cookieAttributes": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "securityTxt": {
+        "status": "disabled",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      }
+    },
+    "findings": {
+      "records": 8,
+      "checkCodes": 8,
+      "affectedPages": 1,
+      "evidenceOccurrences": 8,
+      "byCheck": [
+        {
+          "code": "hsts_missing_or_inactive",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_canonical",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_content_security_policy",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_frame_protection",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_meta_description",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_nosniff_header",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_referrer_policy",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        },
+        {
+          "code": "missing_viewport",
+          "records": 1,
+          "affectedPages": 1,
+          "evidenceOccurrences": 1
+        }
+      ]
+    }
+  },
+  "capabilities": {
+    "http": "complete",
+    "robots": "complete",
+    "technicalSeo": "complete",
+    "browser": "disabled",
+    "pagespeed": "disabled",
+    "contacts": "complete",
+    "technology": "disabled",
+    "images": "disabled",
+    "brokenLinks": "complete",
+    "imageSize": "disabled",
+    "securityTxt": "disabled"
+  },
+  "contacts": {
+    "profile": "contacts-v12-whatsapp-source-review",
+    "status": "complete",
+    "coverage": {
+      "capturedHtmlPages": 1,
+      "inspectedPages": 1,
+      "pagesWithNoCandidates": 0,
+      "uninspectedPages": 0,
+      "knownContactPagesUncaptured": [],
+      "knownContactPagesOmitted": 0,
+      "incompleteDiscoveryPages": 0,
+      "acceptedEmails": 0,
+      "acceptedPhones": 1,
+      "rejectedValues": 0,
+      "mergedOccurrences": 0,
+      "retainedSources": 1,
+      "omittedCandidates": 0,
+      "untrackedCandidateOverflowOccurrences": 0,
+      "omittedSources": 0,
+      "omittedRawVariants": 0,
+      "truncatedHtmlPages": 0,
+      "omittedPageCandidates": 0,
+      "omittedTraversalNodes": 0,
+      "omittedJsonLdValues": 0,
+      "omittedVisibleText": 0,
+      "unresolvedWhatsAppLinks": 1,
+      "omittedWhatsAppLinks": 0
+    },
+    "candidates": [
+      {
+        "kind": "phone",
+        "rawValue": [
+          "+442079460958"
+        ],
+        "normalizedValue": "+442079460958",
+        "e164": "+442079460958",
+        "sources": [
+          {
+            "pageUrl": "https://ckc.example/",
+            "type": "mailto-tel",
+            "region": "main",
+            "contactPage": false,
+            "observedAt": "2026-10-29T00:00:00.000Z",
+            "channel": "phone",
+            "captureMode": "http"
+          }
+        ],
+        "channels": [
+          "phone"
+        ],
+        "rank": {
+          "tier": 4,
+          "reasons": [
+            "general_page_or_footer"
+          ]
+        },
+        "validation": "FORMAT_VALID",
+        "ownership": "UNVERIFIED",
+        "eligibleForPrimary": true
+      }
+    ],
+    "unresolvedWhatsApp": [
+      {
+        "pageUrl": "https://ckc.example/",
+        "type": "whatsapp-link",
+        "region": "main",
+        "contactPage": false,
+        "observedAt": "2026-10-29T00:00:00.000Z",
+        "channel": "whatsapp",
+        "whatsappEvidenceKind": "BUTTON_OBSERVED_NUMBER_UNRESOLVED",
+        "context": "short-code",
+        "captureMode": "http"
+      }
+    ],
+    "suggestedPrimary": {
+      "email": null,
+      "phone": null
+    }
+  },
+  "findings": [
+    {
+      "code": "hsts_missing_or_inactive",
+      "category": "security",
+      "observed": "HTTPS response has no active HSTS max-age directive.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "Strict-Transport-Security"
+        }
+      ]
+    },
+    {
+      "code": "missing_nosniff_header",
+      "category": "security",
+      "observed": "X-Content-Type-Options is missing or is not set to nosniff.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "X-Content-Type-Options"
+        }
+      ]
+    },
+    {
+      "code": "missing_referrer_policy",
+      "category": "security",
+      "observed": "No Referrer-Policy response header was found.",
+      "severity": "informational",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "Referrer-Policy"
+        }
+      ]
+    },
+    {
+      "code": "missing_content_security_policy",
+      "category": "security",
+      "observed": "No Content-Security-Policy response header was found.",
+      "severity": "informational",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "Content-Security-Policy"
+        }
+      ]
+    },
+    {
+      "code": "missing_frame_protection",
+      "category": "security",
+      "observed": "No restrictive CSP frame-ancestors directive or effective X-Frame-Options header was found.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http",
+          "value": "missing",
+          "excerpt": "frame-ancestors / X-Frame-Options"
+        }
+      ]
+    },
+    {
+      "code": "missing_meta_description",
+      "category": "metadata",
+      "observed": "No meta description was found.",
+      "severity": "medium",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http"
+        }
+      ]
+    },
+    {
+      "code": "missing_viewport",
+      "category": "metadata",
+      "observed": "No non-empty viewport meta element was found.",
+      "severity": "low",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http"
+        }
+      ]
+    },
+    {
+      "code": "missing_canonical",
+      "category": "indexability",
+      "observed": "No canonical link element was found.",
+      "severity": "informational",
+      "evidence": [
+        {
+          "pageUrl": "https://ckc.example/",
+          "observedAt": "2026-10-29T00:00:00.000Z",
+          "source": "http"
+        }
+      ]
+    }
+  ],
+  "robotsObservation": {
+    "policy": "observation-only",
+    "revision": "robots-observation-only-v1",
+    "retrieval": "missing",
+    "crawlerUserAgent": "webcrawl/0.1",
+    "googlebotEvaluation": "NOT_VERIFIED",
+    "knownDiscoveredUrls": 1,
+    "advisoryAllowed": 1,
+    "advisoryDisallowed": 0,
+    "advisoryUnknown": 0,
+    "capturedDisallowedCount": 0,
+    "capturedDisallowedSamples": [],
+    "omittedCapturedDisallowedSamples": 0
+  }
+}
