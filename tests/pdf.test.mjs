@@ -30,7 +30,7 @@ test('renders six distinct findings to a readable, sequential PDF with extractab
 });
 
 test('rejects missing, repeated, or malformed findings and unknown fields', () => {
-  const x = sample(); x.findings.pop(); assert.throws(() => renderCustomerPdf(x), /Exactly six/);
+  const x = sample(); x.findings=[]; assert.throws(() => renderCustomerPdf(x), /One to six/);
   const y = sample(); y.findings[5].id = y.findings[0].id; assert.throws(() => renderCustomerPdf(y), /distinct/);
   const z = sample(); z.extra = 'unexpected'; assert.throws(() => renderCustomerPdf(z), /Unexpected/);
   assert.throws(() => renderCustomerPdf({...sample(), locale:'fr'}), /locale/);

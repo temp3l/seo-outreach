@@ -37,10 +37,10 @@ const result = {
 // Explicit successful captures for these synthetic positive report fixtures.
 result.coverage.urls = [...new Set([
   '/', '/offer/', '/service?token=secret-query', '/gallery?private=1', '/kite-privatunterricht-coast',
-  '/one', '/two', '/three', '/en/free-guide/', '/de/impressum-2/', '/es/politica-cookies/', '/kurse',
-  '/page?token=one', '/page?token=two', '/other', '/third',
-  ...Array.from({length:80},(_,i)=>`/page-${i}?token=secret`),
-  ...Array.from({length:53},(_,i)=>`/page-${i}`),
+  '/courses/one', '/courses/two', '/courses/three', '/en/free-guide/', '/de/impressum-2/', '/es/politica-cookies/', '/kurse',
+  '/courses/page?token=one', '/courses/page?token=two', '/courses/other', '/courses/third',
+  ...Array.from({length:80},(_,i)=>`/courses/page-${i}?token=secret`),
+  ...Array.from({length:53},(_,i)=>`/courses/page-${i}`),
 ])].map(path=>({url:`https://example.test${path}`,outcome:'captured',statusCode:200}));
 
 test('customer briefing uses plain-language priorities and a separate developer handoff', () => {
@@ -64,7 +64,7 @@ test('customer summary shows the selected topic count without added observation 
   const findings = ['indexability', 'metadata', 'content', 'performance', 'accessibility', 'security'].map(make);
   for (const locale of ['en', 'de']) {
     const html = renderCustomerSummaryHtml({ ...result, findings }, locale);
-    assert.match(html, locale === 'en' ? /<strong>3<\/strong>topics to review/u : /<strong>3<\/strong>Themen zum Prüfen/u);
+    assert.match(html, locale === 'en' ? /<strong>4<\/strong>topics to review/u : /<strong>4<\/strong>Themen zum Prüfen/u);
     assert.doesNotMatch(html, /addresses discovered|Adressen entdeckt|Additional observations|Weitere Beobachtungen|Security observations also|Sicherheitsbeobachtungen sollten|Routine search warnings|SEO-Routinehinweise/u);
   }
 });
@@ -83,7 +83,7 @@ test('operator status includes security coverage and security finding details', 
 });
 
 test('customer copy names only observed problems and keeps priority order independent of frequency', () => {
-  const make = (code, category, count = 1) => ({ code, category, observed: 'Fixture', evidence: Array.from({length: count}, (_, i) => ({pageUrl: `https://example.test/page-${i}?token=secret`, source: 'http', observedAt: result.startedAt})) });
+  const make = (code, category, count = 1) => ({ code, category, observed: 'Fixture', evidence: Array.from({length: count}, (_, i) => ({pageUrl: `https://example.test/courses/page-${i}?token=secret`, source: 'http', observedAt: result.startedAt})) });
   const canonical = renderCustomerSummaryHtml({...result, findings: [make('missing_canonical', 'indexability')]});
   assert.match(canonical, /Preferred page versions/u);
   assert.doesNotMatch(canonical, /error status codes|Internal links to missing pages|declare that search engines should not index/u);
@@ -115,6 +115,7 @@ test('customer error examples direct readers to the technical report without pri
 
 test('customer topic labels distinguish unknown legacy coverage from known zero and one', () => {
   const { audit } = createEvidenceFixture(1);
+  audit.target = audit.coverage.urls[0].url;
   audit.findings = [{ code: 'missing_h1', category: 'content', observed: 'Missing H1', evidence: [{ pageUrl: audit.coverage.urls[0].url, source: 'http', observedAt: audit.startedAt }] }];
   audit.coverage.findings = { records: 1, checkCodes: 1, affectedPages: 1, evidenceOccurrences: 1, byCheck: [{ code: 'missing_h1', records: 1, affectedPages: 1, evidenceOccurrences: 1 }] };
   for (const locale of ['en', 'de']) for (const state of ['legacy', 'zero', 'one']) {
@@ -165,7 +166,7 @@ test('customer briefing localizes scope and handles empty, security-only and una
 
 test('routine customer SEO scope excludes observed noindex without hiding safety or mutating evidence', () => {
   const evidence = path => ({pageUrl:'https://example.test'+path,source:'http',observedAt:result.startedAt});
-  const all = Array.from({length:53},(_,i)=>evidence(`/page-${i}`));
+  const all = Array.from({length:53},(_,i)=>evidence(`/courses/page-${i}`));
   const warnings={code:'duplicate_h1',category:'content',observed:'Repeated main heading text',evidence:all};
   const noindex={code:'noindex',category:'indexability',observed:'Noindex',evidence:all.slice(0,45)};
   const report={...result,findings:[warnings,noindex]};
@@ -178,7 +179,7 @@ test('routine customer SEO scope excludes observed noindex without hiding safety
   const onlyNoindex={...report,findings:[{...warnings,evidence:[evidence('/kurse')]},{...noindex,evidence:[evidence('/kurse')]},{code:'broken_internal_link',category:'indexability',observed:'Missing target',evidence:[evidence('/kurse')]},result.findings[3]]};
   const filtered=renderCustomerSummaryHtml(onlyNoindex);
   assert.doesNotMatch(filtered,/Some pages repeat main-heading text/u);
-  assert.match(filtered,/Pages excluded from indexing/u);
+  assert.match(filtered,/Pages requesting exclusion from search/u);
   assert.doesNotMatch(filtered,/Internal links to missing pages were recorded/u);
   assert.doesNotMatch(filtered,/Security observations/u);
   assert.match(renderOperatorStatusHtml(report),/Repeated main heading text/u);
@@ -186,13 +187,13 @@ test('routine customer SEO scope excludes observed noindex without hiding safety
 
 test('noindex joins retain query identity and cross-page duplicates require two remaining pages', () => {
   const e = pageUrl => ({pageUrl,source:'http',observedAt:result.startedAt});
-  const base='https://example.test/page';
+  const base='https://example.test/courses/page';
   const ni={code:'noindex',category:'indexability',observed:'Noindex',evidence:[e(base+'?token=one')]};
   const heading={code:'missing_h1',category:'content',observed:'No main heading',evidence:[e(base+'?token=two')]};
   assert.match(renderCustomerSummaryHtml({...result,findings:[ni,heading]}),/Missing main headings/u);
-  const duplicate={code:'duplicate_title_across_pages',category:'metadata',observed:'Same title',evidence:[e(base+'?token=one'),e('https://example.test/other')]};
+  const duplicate={code:'duplicate_title_across_pages',category:'metadata',observed:'Same title',evidence:[e(base+'?token=one'),e('https://example.test/courses/other')]};
   assert.doesNotMatch(renderCustomerSummaryHtml({...result,findings:[ni,duplicate]}),/Repeated page titles/u);
-  assert.match(renderCustomerSummaryHtml({...result,findings:[ni,{...duplicate,evidence:[...duplicate.evidence,e('https://example.test/third')]}]}),/Repeated page titles/u);
+  assert.match(renderCustomerSummaryHtml({...result,findings:[ni,{...duplicate,evidence:[...duplicate.evidence,e('https://example.test/courses/third')]}]}),/Repeated page titles/u);
 });
 
 test('issuer configuration is explicit, escaped, validated and absent from operator output', async () => {
@@ -236,7 +237,7 @@ test('repeated sitewide header observations stay raw per page and display as one
   const headers = Array.from({ length: 24 }, (_, index) => ({
     code: 'missing_nosniff_header', category: 'security', severity: 'low',
     observed: 'X-Content-Type-Options is missing.',
-    evidence: [{ pageUrl: `https://example.test/page-${index}`, observedAt: '2026-10-24T12:00:00.000Z', source: 'http' }],
+    evidence: [{ pageUrl: `https://example.test/courses/page-${index}`, observedAt: '2026-10-24T12:00:00.000Z', source: 'http' }],
   }));
   const report = renderCustomerSummaryHtml({ ...result, findings: headers }, 'en');
   assert.equal(headers.length, 24);
@@ -250,9 +251,9 @@ test('repeated sitewide header observations stay raw per page and display as one
 test('duplicate finding groups preserve category and code insertion order without mutating inputs', async () => {
   const { renderAuditHtml } = await import('../dist/reports/html.js');
   const findings = [
-    { code: 'missing_meta_description', category: 'metadata', observed: 'first', evidence: [{ pageUrl: 'https://example.test/one', observedAt: result.startedAt, source: 'http' }] },
-    { code: 'missing_h1', category: 'content', observed: 'second', evidence: [{ pageUrl: 'https://example.test/two', observedAt: result.startedAt, source: 'http' }] },
-    { code: 'missing_meta_description', category: 'metadata', observed: 'third', evidence: [{ pageUrl: 'https://example.test/three', observedAt: result.startedAt, source: 'http' }] },
+    { code: 'missing_meta_description', category: 'metadata', observed: 'first', evidence: [{ pageUrl: 'https://example.test/courses/one', observedAt: result.startedAt, source: 'http' }] },
+    { code: 'missing_h1', category: 'content', observed: 'second', evidence: [{ pageUrl: 'https://example.test/courses/two', observedAt: result.startedAt, source: 'http' }] },
+    { code: 'missing_meta_description', category: 'metadata', observed: 'third', evidence: [{ pageUrl: 'https://example.test/courses/three', observedAt: result.startedAt, source: 'http' }] },
   ];
   const before = structuredClone(findings);
   const report = { ...result, findings };
@@ -331,13 +332,14 @@ test('PageSpeed scores require matching evidence and suppress conflicting duplic
     scoreFinding('performance', 77, 77, '/', '2026-10-30T14:51:00.000Z'),
     scoreFinding('accessibility', 90, 89, '/', '2026-10-30T14:51:00.000Z'),
     scoreFinding('best-practices', 88, 88, '/', '2026-10-30T14:51:00.000Z'),
-    scoreFinding('best-practices', 88, 88, '/other-page', '2026-10-30T14:52:00.000Z'),
+    scoreFinding('best-practices', 89, 89, '/', '2026-10-30T14:52:00.000Z'),
     scoreFinding('seo', 91, 91, '/', '2026-10-30T14:51:00.000Z'),
   ];
-  const html = renderCustomerSummaryHtml({ ...result, target: 'https://example.test/', findings }, 'en');
+  // Keep provenance admissible so this fixture isolates conflicting category scores.
+  const html = renderCustomerSummaryHtml({ ...result, target: 'https://example.test/', startedAt: '2026-10-30T14:39:00.000Z', completedAt: '2026-10-30T14:53:00.000Z', findings, capabilities: { ...result.capabilities, pagespeed: 'complete' } }, 'en');
   assert.match(html, /aria-label="Performance 77\/100"/u);
   assert.doesNotMatch(html, /aria-label="SEO 91\/100"/u);
-  assert.doesNotMatch(html, /aria-label="Accessibility 90\/100"|aria-label="Best Practices 88\/100"/u);
+  assert.doesNotMatch(html, /aria-label="Accessibility 90\/100"|aria-label="Best Practices (?:88|89)\/100"/u);
   assert.equal((html.match(/class="score-card"/gu) ?? []).length, 1);
   assert.doesNotMatch(html, /Requested:/u);
   assert.match(html, /Some measurements were unavailable/u);

@@ -45,6 +45,11 @@ const copy:Record<Locale,Record<string,Copy>>={
   malformed_json_ld:{observed:'A página capturada tinha dados estruturados inválidos.',implication:'Os buscadores podem não conseguir interpretar essa marcação.',fix:'Corrija os dados e valide-os em relação ao conteúdo da página.'}
  }
 };
+/** Fixed localized observations supplied to generation and used independently in reports. */
+export function findingWording(code:string,locale:Locale):Readonly<Copy>|undefined {
+ const wording=Object.hasOwn(copy,locale)&&Object.hasOwn(copy[locale],code)?copy[locale][code]:undefined;
+ return wording?{...wording}:undefined;
+}
 function reviewableReference(page:string):boolean {
   try {
     const u=new URL(page);if(u.search||u.hash||u.username||u.password)return false;
@@ -84,7 +89,7 @@ export function validateSelection(evidence:Normalized,pages:unknown[],selection:
   const reference=reviewableReference(group.page)?group.page:ref.url.includes('[path-redacted]')?`${evidence.hostname} — ${group.pageId}`:ref.url;
   findings.push({id:issue.id,code:issue.code,reference,...text});
  }
- return {version:'decision-v1',locale,company:evidence.hostname,materialFingerprint:digest.materialFingerprint,coverage:{captured:evidence.crawl.captured,failed:evidence.crawl.failed,skipped:evidence.crawl.skipped,unattempted:evidence.crawl.unattempted,exported:pages.length,omitted:evidence.crawl.captured-pages.length,robots:evidence.robots,...(evidence.exportCoverage?{truncatedPages:evidence.exportCoverage.truncatedPages}:{})},findings,customerStatus:'HOLD',reasons:findings.length===6?['customer_review_and_artifact_verification_required']:['fewer_than_six_distinct_findings','customer_review_and_artifact_verification_required']};
+ return {version:'decision-v1',locale,company:evidence.hostname,materialFingerprint:digest.materialFingerprint,coverage:{captured:evidence.crawl.captured,failed:evidence.crawl.failed,skipped:evidence.crawl.skipped,unattempted:evidence.crawl.unattempted,exported:pages.length,omitted:evidence.crawl.captured-pages.length,robots:evidence.robots,...(evidence.exportCoverage?{truncatedPages:evidence.exportCoverage.truncatedPages}:{})},findings,customerStatus:'HOLD',reasons:findings.length>=1&&findings.length<=6?['customer_review_and_artifact_verification_required']:['no_supported_findings','customer_review_and_artifact_verification_required']};
 }
 /** Audit-only observations are private review material and never confer customer readiness. */
 export function auditReviewFindings(evidence:Normalized,locale:Locale):Finding[] {

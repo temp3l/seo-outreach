@@ -1,7 +1,8 @@
+import { countDeduplicatedIssues } from './issue-counts.js';
 import { isReportableEvidenceAdmissible } from './qualification.js';
 import type { AuditFinding, AuditResult, FindingEvidence } from '@spora/webcrawl';
 import { validateReportContact, type ReportContact } from './report-contact.js';
-import { reportCapturedUrlCount, reportPageReference, reportPageReferences, type ReportPageReference } from './references.js';
+import { reportEvidenceCounts, reportCapturedUrlCount, reportPageReference, reportPageReferences, type ReportPageReference } from './references.js';
 
 type Locale = 'en' | 'de';
 const esc = (s: string): string => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -9,9 +10,19 @@ const urlLikeIssuerIdentity = (value: string): boolean => /(?:\b[a-z][a-z0-9+.-]
 const commercial = (url: string): boolean => /\/(?:kurse|kurs|courses?|lessons?|shop|products?|collections?|rentals?|hire|booking|buchen)(?:\/|$)|\/[^/]*(?:kurs|unterricht|training|lesson|course|product|collection|rental|booking)[^/]*(?:\/|$)/iu.test(new URL(url).pathname);
 // These exact route segments identify transactional endpoints even below an offer directory.
 const transactional = (url: string): boolean => /\/(?:checkout|cart|payment(?:-form)?|order-confirmation|thank-you)(?:\/|$)/iu.test(new URL(url).pathname);
-const archive = (url: string): boolean => { try { return /\/(?:category|tag|author|archive|archives)(?:\/|$)/iu.test(new URL(url).pathname); } catch { return false; } };
-const legal = (url: string): boolean => /\/(?:impressum(?:-\d+)?|imprint|privacy(?:-policy)?|datenschutz(?:richtlinie)?|cookie(?:-policy|-richtlinie)?|legal-notice|aviso-legal|politica-(?:privacidad|cookies))(?:\/|$)/iu.test(new URL(url).pathname);
+const archive = (url: string): boolean => { try { const path = new URL(url).pathname; return /\/(?:category|tag|author|archive|archives)(?:\/|$)/iu.test(path) || /^\/(?:19|20)\d{2}(?:\/(?:0?[1-9]|1[0-2])(?:\/(?:0?[1-9]|[12]\d|3[01]))?)?(?:\/page\/\d+)?\/?$/iu.test(path); } catch { return false; } };
+const legal = (url: string): boolean => /\/(?:impressum(?:-\d+)?|imprint|privacy(?:-policy)?|datenschutz(?:richtlinie)?|cookie(?:-policy|-richtlinie)?|legal-notice|affiliate-disclaimer|disclaimer|terms(?:-and-conditions|-of-service|-of-use)?|refund-policy|returns-policy|aviso-legal|politica-(?:privacidad|cookies))(?:\/|$)/iu.test(new URL(url).pathname);
 const nonOffer = (url: string): boolean => legal(url) || archive(url) || /\/attachment(?:\/|$)/iu.test(new URL(url).pathname) || /\/(?:accessibility|accesibilidad|zuganglichkeit|web-map|mapa-web|webkarte)(?:\/|$)/iu.test(new URL(url).pathname);
+// Routine search/headings advice is limited to recognizable main site routes.
+// Unknown slugs remain operator review material rather than filling a quota.
+function routineCustomerPage(raw: string, target: string, seedFinal?: string): boolean {
+  try {
+    const path = new URL(raw).pathname;
+    if (nonOffer(raw) || transactional(raw) || /\/(?:blog|news|posts?|demo|sample-page|hello-world|lorem-ipsum|policies)(?:\/|$)/iu.test(path)) return false;
+    if (captureKey(raw) === captureKey(target) || seedFinal !== undefined && captureKey(raw) === captureKey(seedFinal) || /^\/(?:(?:[a-z]{2}(?:-[a-z]{2})?)\/?)?$/iu.test(path)) return true;
+    return commercial(raw) || /\/(?:contact(?:-us)?|kontakt|contacto|contato|about(?:-us)?|team|our-team|locations?|schools?|services?|offers?|pricing|prices?|rates?|accommod?ation|activities|appointments?|kite|kitesurfing|wing(?:-foil)?|wingfoiling|foil)(?:\/|$)/iu.test(path);
+  } catch { return false; }
+}
 const pages = (findings: readonly AuditFinding[]): ReportPageReference[] => reportPageReferences(findings).sort((a,b) => Number(commercial(b.url)) - Number(commercial(a.url)) || Number(nonOffer(a.url)) - Number(nonOffer(b.url)) || new URL(a.url).pathname.split('/').filter(Boolean).length - new URL(b.url).pathname.split('/').filter(Boolean).length || a.url.localeCompare(b.url));
 export type CustomerPriority = { code: string; measurement?: 'performance'; title: string; observed: string; why: string; action: string; owner: string; urls: ReportPageReference[]; rank: number; group: number; severity?: number };
 
@@ -99,7 +110,7 @@ const CUSTOMER_TITLES: Readonly<Record<string, readonly [string, string]>> = {
   http_status_error: ['Pages returning errors', 'Seiten mit Fehlermeldungen'],
   missing_h1: ['Missing main headings', 'Fehlende Hauptüberschriften'],
   missing_canonical: ['Preferred page versions', 'Bevorzugte Seitenversionen'],
-  noindex: ['Pages excluded from indexing', 'Von der Indexierung ausgeschlossene Seiten'],
+  noindex: ['Pages requesting exclusion from search', 'Seiten mit Anweisung zum Suchausschluss'],
   pagespeed_category_score: ['Mobile loading performance', 'Mobile Ladeleistung'],
 };
 
@@ -111,8 +122,8 @@ export function customerBriefing(result: AuditResult, locale: Locale, options: R
   const t = (en: string, german: string): string => de ? german : en;
   const host = (() => { try { return new URL(result.target).hostname; } catch { return t('Website', 'Website'); } })();
   const date = new Intl.DateTimeFormat(de ? 'de-DE' : 'en-GB', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(result.startedAt));
-  const capturedCount = result.crawl.captured;
-  const { selected, scores, scoreUrlConflict, scoreTargetConflict, customerFindings } = customerPriorityProjection(result, locale);
+  const capturedCount = reportEvidenceCounts(result).capturedUrls;
+  const { selected, scores, scoreUrlConflict, scoreTargetConflict, customerFindings, deduplicatedIssues } = customerPriorityProjection(result, locale);
   const compact = host.length > 100 || !!issuer && Object.values(issuer).join('').length > 220;
 
   const labels: Record<string, string> = { performance: t('Performance', 'Leistung'), accessibility: t('Accessibility', 'Barrierefreiheit'), 'best-practices': t('Best Practices', 'Best Practices'), seo: t('SEO', 'SEO') };
@@ -128,14 +139,14 @@ export function customerBriefing(result: AuditResult, locale: Locale, options: R
   // from this PDF so the only site address remains the domain in the header.
   const publisherName = issuer ? [issuer.name, issuer.company].filter(Boolean).map(value => esc(value!)).join(' · ') : '';
   const publisherChannels = issuer ? [issuer.email, issuer.phone].filter(Boolean).map(value => esc(value!)).join(' · ') : '';
-  const footer = `<footer class="issuer">${publisherName ? `<strong>${publisherName}</strong>` : ''}${publisherChannels ? `<span>${publisherChannels}</span>` : ''}</footer>`;
+  const footer = `<footer class="issuer"><aside class="offer"><strong>${t('Let’s get in touch', 'Lassen Sie uns sprechen')}</strong><p>${t('Contact us to discuss this review.', 'Kontaktieren Sie uns zu dieser Prüfung.')}</p></aside><div class="issuer-details">${publisherName ? `<strong>${publisherName}</strong>` : ''}${publisherChannels ? `<span>${publisherChannels}</span>` : ''}</div></footer>`;
   const hold = selected.length === 0 || compact;
   const cards = selected.map(topic => {
     const count = reportCapturedUrlCount(result, topic.urls);
     const broken = customerFindings.filter(f => f.code === 'broken_internal_link').flatMap(f => f.evidence);
     const destinations = new Set(broken.flatMap(e => { try { return e.anchorHref ? [reportPageReference(new URL(e.anchorHref, e.pageUrl).href)?.identity].filter(Boolean) : []; } catch { return []; } })).size;
     const referring = new Set(broken.filter(e => e.anchorHref).map(e => reportPageReference(e.pageUrl)?.identity).filter(Boolean)).size;
-    const pageLabel = topic.code === 'broken_internal_link' ? t(`${destinations} distinct broken destinations · ${referring} referring pages`, `${destinations} verschiedene fehlerhafte Ziele · ${referring} verweisende Seiten`) : topic.measurement ? t('Tested page', 'Geprüfte Seite') : count === null ? t('Page review', 'Seitenprüfung') : `${count} ${count === 1 ? t('page to review', 'Seite prüfen') : t('pages to review', 'Seiten prüfen')}`;
+    const pageLabel = topic.code === 'broken_internal_link' ? t(`${destinations} distinct broken ${destinations === 1 ? 'destination' : 'destinations'} · ${referring} referring ${referring === 1 ? 'page' : 'pages'}`, `${destinations} verschiedene fehlerhafte Ziele · ${referring} verweisende Seiten`) : topic.measurement ? t('Tested page', 'Geprüfte Seite') : count === null ? t('Page review', 'Seitenprüfung') : `${count} ${count === 1 ? t('page to review', 'Seite prüfen') : t('pages to review', 'Seiten prüfen')}`;
     const example = topic.urls[0];
     const observation = customerPriorityObservation(customerFindings, topic);
     const selectedEvidence = observation?.evidence;
@@ -146,8 +157,8 @@ export function customerBriefing(result: AuditResult, locale: Locale, options: R
     return `<article class="card"><span class="label" data-issue-code="${esc(topic.code)}" data-example-finding="${exampleFinding}" data-example-evidence="${exampleEvidence}">${pageLabel}</span><h3>${esc(title)}</h3>${affectedPage}${topic.observed ? `<p class="note">${esc(topic.observed)}</p>` : ''}<p>${esc(topic.why)}</p><p class="action"><strong>${t('Next step', 'Nächster Schritt')}:</strong> ${esc(topic.action)}</p></article>`;
   }).join('');
   return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t('Website review', 'Website-Prüfung')}</title><style>
-@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;color:#183640;font:10pt/1.3 Arial,Helvetica,sans-serif}.page{width:210mm;min-height:297mm;margin:auto;padding:12mm;display:flex;flex-direction:column;overflow-wrap:anywhere}.hero{background:#102d3a;color:white;padding:5mm 6mm;border-radius:3mm}.hero-top{display:flex;justify-content:space-between;gap:4mm;font-size:9pt;color:#c4ddda}.hero h1{font-size:21pt;line-height:1.12;margin:3mm 0 1mm}.hero p{margin:1mm 0;font-size:10pt}.snapshots{display:flex;justify-content:flex-start;gap:3mm;padding:4mm 0 0;flex-wrap:wrap}.snapshot{padding:1.5mm 3mm;border:1px solid #d8e3e1;border-radius:2mm;background:#f5f8f7;color:#49636a;font-size:9pt}.snapshot strong{color:#155e66;font-size:11pt;margin-right:2mm}.scope{margin-top:3mm;padding:3mm;background:#f4f8f7;border-left:1mm solid #16858a}.lighthouse{margin-top:4mm;padding:3mm 4mm;border:1px solid #d8e3e1;border-radius:2mm;background:#f5f8f7}.lighthouse h2,.findings h2{font-size:10pt;margin:0 0 2mm}.scores{display:flex;gap:3mm}.score-card{flex:1;min-width:0;text-align:center;background:white;border:1px solid #d8e3e1;border-radius:2mm;padding:2mm}.score-card svg{display:block;width:12mm;height:12mm;margin:auto}.score-card strong,.score-date{display:block;font-size:9pt}.findings{margin-top:4mm}.grid{display:grid;grid-template-columns:1fr;gap:3mm}.card{padding:3mm 4mm;border:1px solid #d8e3e1;border-left:.8mm solid #17858a;border-radius:2mm;break-inside:avoid}.card h3{font-size:12pt;line-height:1.2;margin:1mm 0}.card p{font-size:10pt;line-height:1.3;margin:0}.card p+p{margin-top:1.5mm}p{margin:1mm 0}.label{font-size:9pt;font-weight:bold;color:#49636a}.card .example{margin:1mm 0 2mm;font-size:9.5pt;color:#49636a}.example a{display:inline;color:#145c6a;text-decoration:underline;overflow-wrap:anywhere}.note{font-size:9pt}.notes{margin-top:2mm}.alert{color:#8e4b1d;font-weight:bold}.offer{margin-top:4mm;margin-bottom:4mm;break-inside:avoid}.offer strong{font-size:10pt}.offer p{font-size:9.5pt;line-height:1.3;margin:1mm 0}.issuer{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:1mm 4mm;margin: auto 0 0;padding:4mm 0 0;border-top:1px solid #d8e3e1;font-size:9.5pt;line-height:1.4;color:#49636a;overflow-wrap:anywhere}.issuer strong{color:#183640}.issuer span{display:inline}.compact .hero h1{font-size:15pt}@media screen and (max-width:700px){.page{width:100%;min-height:0;padding:20px}.hero{padding:16px}.hero-top{flex-wrap:wrap}.scores{flex-wrap:wrap}.issuer{margin-top:24px}}@media print{.page{margin:0}}
-</style></head><body data-publication-status="${hold ? 'HOLD' : 'PREVIEW'}" data-client-ready="false" data-review-layout-check="true"><main class="page${hold ? ' hold-preview' : ''}${compact ? ' compact' : selected.length > 4 ? (selected.length === 5 ? ' six-topics five-topics' : ' six-topics') : ''}"><header class="hero"><div class="hero-top"><strong>${t('WEBSITE REVIEW', 'WEBSITE-PRÜFUNG')}</strong><span>${t('Website checked', 'Website geprüft')} · <time datetime="${esc(result.startedAt)}">${esc(date)}</time></span></div><h1>${esc(host)}</h1><p><strong>${t('What deserves attention', 'Was Aufmerksamkeit verdient')}</strong></p></header><div class="snapshots"><div class="snapshot"><strong>${capturedCount}</strong>${t(capturedCount === 1 ? 'captured response' : 'captured responses', capturedCount === 1 ? 'erfasste Antwort' : 'erfasste Antworten')}</div><div class="snapshot"><strong>${selected.length}</strong>${t(selected.length === 1 ? 'topic to review' : 'topics to review', selected.length === 1 ? 'Thema zum Prüfen' : 'Themen zum Prüfen')}</div></div><section class="lighthouse"><h2>${homepageMeasurement || !scores.length && (() => { try { const u = new URL(result.target); return u.pathname === '/' && !u.search; } catch { return false; } })() ? t('Homepage · Mobile lab page', 'Startseite · Mobile Labormessung') : t('Tested page · Mobile lab page', 'Geprüfte Seite · Mobile Labormessung')}</h2>${psi}</section><section class="findings"><h2>${selected.length ? t('Key observations', 'Wichtige Beobachtungen') : t('No selected priorities', 'Keine ausgewählten Schwerpunkte')}</h2>${selected.length ? `<div class="grid${selected.length === 5 ? ' five-topics' : ''}">${cards}</div>` : `<p>${t('No specific priority was selected; this does not establish that the website is problem-free.', 'Es wurde kein Schwerpunkt ausgewählt; das belegt keine Fehlerfreiheit der Website.')}</p>`}</section><aside class="offer"><strong>${t('Let’s get in touch', 'Lassen Sie uns sprechen')}</strong><p>${t('Contact us using the reply details below to discuss this archived review.', 'Kontaktieren Sie uns über die unten stehenden Angaben, um diese archivierte Prüfung zu besprechen.')}</p></aside>${footer}</main></body></html>`;
+@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;color:#183640;font:10pt/1.3 Arial,Helvetica,sans-serif}.page{width:210mm;min-height:297mm;margin:auto;padding:0 12mm;display:flex;flex-direction:column;overflow-wrap:anywhere}.hero{background:#102d3a;color:white;padding:5mm 12mm;margin:0 -12mm;border-radius:0}.hero-top{display:flex;justify-content:space-between;gap:4mm;font-size:9pt;color:#c4ddda}.hero h1{font-size:21pt;line-height:1.12;margin:3mm 0 1mm}.hero p{margin:1mm 0;font-size:10pt}.snapshots{display:flex;justify-content:center;gap:3mm;padding:4mm 0 0;flex-wrap:wrap}.snapshot{padding:1.5mm 3mm;border:1px solid #d8e3e1;border-radius:2mm;background:#f5f8f7;color:#49636a;font-size:9pt}.snapshot strong{color:#155e66;font-size:11pt;margin-right:2mm}.scope{margin-top:3mm;padding:3mm;background:#f4f8f7;border-left:1mm solid #16858a}.lighthouse{margin-top:4mm;padding:3mm 4mm;border:1px solid #d8e3e1;border-radius:2mm;background:#f5f8f7}.lighthouse h2,.findings h2{font-size:10pt;margin:0 0 2mm}.scores{display:flex;gap:3mm}.score-card{flex:1;min-width:0;text-align:center;background:white;border:1px solid #d8e3e1;border-radius:2mm;padding:2mm}.score-card svg{display:block;width:12mm;height:12mm;margin:auto}.score-card strong,.score-date{display:block;font-size:9pt}.findings{margin-top:4mm}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm}.one-topic .grid{grid-template-columns:1fr}.four-topics .grid,.six-topics .grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:3mm 4mm;border:1px solid #d8e3e1;border-left:.8mm solid #17858a;border-radius:2mm;break-inside:avoid}.card h3{font-size:12pt;line-height:1.2;margin:1mm 0}.card p{font-size:10pt;line-height:1.3;margin:0}.card p+p{margin-top:1.5mm}p{margin:1mm 0}.label{font-size:9pt;font-weight:bold;color:#49636a}.card .example{margin:1mm 0 2mm;font-size:9.5pt;color:#49636a}.example a{display:inline;color:#145c6a;text-decoration:underline;overflow-wrap:anywhere}.note{font-size:9pt}.notes{margin-top:2mm}.alert{color:#8e4b1d;font-weight:bold}.offer{margin-top:4mm;margin-bottom:4mm;break-inside:avoid}.offer strong{font-size:10pt}.offer p{font-size:9.5pt;line-height:1.3;margin:1mm 0}.issuer{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:1mm 4mm;margin:auto -12mm 0;padding:4mm 12mm;background:#102d3a;border:0;font-size:9.5pt;line-height:1.4;color:#c4ddda;overflow-wrap:anywhere}.issuer strong{color:white}.issuer span{display:inline}.compact .hero h1{font-size:15pt}@media screen and (max-width:700px){.page{width:100%;min-height:0;padding:20px}.hero{padding:16px}.hero-top{flex-wrap:wrap}.scores{flex-wrap:wrap}.issuer{margin-top:24px}}@media print{.six-topics .hero{padding-top:3mm;padding-bottom:3mm}.six-topics .hero h1{font-size:18pt}.six-topics .snapshots{padding-top:2mm}.six-topics .lighthouse{padding:2mm 3mm}.six-topics .score-card{padding:1mm}.six-topics .score-card svg{width:10mm;height:10mm}.six-topics .grid{gap:1.5mm}.six-topics .card{padding:1.5mm 2mm}.six-topics .card h3{font-size:11pt}.six-topics .card p{line-height:1.2}.six-topics .card p+p{margin-top:1mm}.page{margin:0}.hero{padding-top:4mm;padding-bottom:4mm}.scope{padding:2mm}.lighthouse,.findings{margin-top:3mm}.grid{gap:2mm}.card{padding:2mm 3mm}.offer{margin-top:3mm;margin-bottom:3mm}.issuer{padding-top:3mm;padding-bottom:3mm}}
+.issuer{display:block;flex:none;margin:auto -12mm 0;padding:0;width:auto;background:#102d3a;color:#c4ddda}.issuer .offer{margin:0;padding:3mm 12mm 2mm}.issuer-details{display:flex;align-items:center;flex-wrap:wrap;gap:1mm 4mm;padding:2mm 12mm 3mm;border-top:1px solid #3b5660}.issuer .offer strong{color:white}</style></head><body data-publication-status="${hold ? 'HOLD' : 'PREVIEW'}" data-client-ready="false" data-review-layout-check="true"><main class="page${hold ? ' hold-preview' : ''}${selected.length === 1 ? ' one-topic' : ''}${compact ? ' compact' : selected.length === 4 ? ' four-topics' : selected.length > 4 ? (selected.length === 5 ? ' six-topics five-topics' : ' six-topics') : ''}"><header class="hero"><div class="hero-top"><strong>${t('WEBSITE REVIEW', 'WEBSITE-PRÜFUNG')}</strong><span>${t('Website checked', 'Website geprüft')} · <time datetime="${esc(result.startedAt)}">${esc(date)}</time></span></div><h1>${esc(host)}</h1><p><strong>${t('What deserves attention', 'Was Aufmerksamkeit verdient')}</strong></p></header><div class="snapshots"><div class="snapshot"><strong>${capturedCount ?? '?'}</strong>${t(capturedCount === 1 ? 'page' : 'pages', capturedCount === 1 ? 'Seite' : 'Seiten')}</div><div class="snapshot" data-summary="deduplicated-issues"><strong>${deduplicatedIssues}</strong>${t(deduplicatedIssues === 1 ? 'SEO finding' : 'SEO findings', deduplicatedIssues === 1 ? 'SEO-Befund' : 'SEO-Befunde')}</div><div class="snapshot"><strong>${selected.length}</strong>${t(selected.length === 1 ? 'topic' : 'topics', selected.length === 1 ? 'Thema' : 'Themen')}</div></div><section class="lighthouse"><h2>${homepageMeasurement || !scores.length && (() => { try { const u = new URL(result.target); return u.pathname === '/' && !u.search; } catch { return false; } })() ? t('Homepage · Mobile lab page', 'Startseite · Mobile Labormessung') : t('Tested page · Mobile lab page', 'Geprüfte Seite · Mobile Labormessung')}</h2>${psi}</section><section class="findings"><h2>${selected.length ? t('Key observations', 'Wichtige Beobachtungen') : t('No selected priorities', 'Keine ausgewählten Schwerpunkte')}</h2>${selected.length ? `<div class="grid${selected.length === 5 ? ' five-topics' : ''}">${cards}</div>` : `<p>${t('No specific priority was selected; this does not establish that the website is problem-free.', 'Es wurde kein Schwerpunkt ausgewählt; das belegt keine Fehlerfreiheit der Website.')}</p>`}</section>${footer}</main></body></html>`;
 }
 
 export function customerPriorityProjection(result: AuditResult, locale: Locale = 'en') {
@@ -155,7 +166,7 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
   const t = (en: string, german: string): string => de ? german : en;
   const topics: CustomerPriority[] = [];
   const orderedFindings = result.findings.map(f => ({ ...f, evidence: f.code === 'image_file_too_large' && f.evidence.length ? [f.evidence[0]!, ...f.evidence.slice(1).sort((a,b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))] : [...f.evidence].sort((a,b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) })).sort((a,b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-  const noindex = new Set(orderedFindings.filter(f=>f.code==='noindex').flatMap(f=>f.evidence.map(e=>captureKey(e.pageUrl)).filter((key): key is string=>key!==undefined)));
+  const noindex = new Set(orderedFindings.filter(f=>f.code==='noindex' && isReportableEvidenceAdmissible(result,f)).flatMap(f=>f.evidence.map(e=>captureKey(e.pageUrl)).filter((key): key is string=>key!==undefined)));
   const errorPageKeys = new Set(result.coverage?.urls.filter(item => item.outcome === 'captured' && (item.statusCode === 404 || item.statusCode === 410)).flatMap(item => [item.url, item.finalUrl].filter((url): url is string => Boolean(url)).map(url => captureKey(url)).filter((key): key is string => key !== undefined)) ?? []);
 
   const customerFindings = orderedFindings.flatMap(f=>{
@@ -169,7 +180,10 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
       if (f.code === 'broken_internal_link' && (administrativePage(e.anchorHref) || administrativePage(e.requestedUrl) || administrativePage(e.finalUrl) || emailProtectionPage(e.anchorHref) || emailProtectionPage(e.requestedUrl) || emailProtectionPage(e.finalUrl))) return false;
       if (!['http_status_error', 'broken_internal_link'].includes(f.code) && errorPageKeys.has(captureKey(e.pageUrl) ?? '')) return false;
       if (f.code === 'noindex' && transactional(e.pageUrl)) return false;
-      if (f.code === 'noindex' && (archive(e.pageUrl) || /\/(?:search|privacy|terms|legal)(?:\/|$)/iu.test(new URL(e.pageUrl).pathname)) && !commercial(e.pageUrl)) return false;
+      if (f.code === 'noindex' && (archive(e.pageUrl) || legal(e.pageUrl) || /\/(?:search|legal)(?:\/|$)/iu.test(new URL(e.pageUrl).pathname))) return false;
+      // Policy availability is retained in the technical audit, rather than
+      // outranking an observed failure on an enquiry or offer route.
+      if (f.code === 'http_status_error' && legal(e.pageUrl)) return false;
       if (['http_status_error', 'broken_internal_link'].includes(f.code))
         return typeof e.value === 'number' && (e.value === 404 || e.value === 410 || e.value >= 500 && e.value <= 599);
       return !orderedFindings.some(other => other.code === 'http_status_error' && other.evidence.some(status => status.value === 429 && captureKey(status.pageUrl) === captureKey(e.pageUrl) && status.observedAt === e.observedAt));
@@ -179,6 +193,8 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
     if (!isReportableEvidenceAdmissible(result, f)) return [];
     if (!ROUTINE_SEARCH_CODES.has(f.code)) return [f];
     const evidence=f.evidence.filter(e=>{
+      const seedFinal = result.coverage?.urls.find(row => captureKey(row.url) === captureKey(result.target) && row.outcome === 'captured')?.finalUrl;
+      if (!routineCustomerPage(e.pageUrl, result.target, seedFinal)) return false;
       const key=captureKey(e.pageUrl);
       if (key && noindex.has(key)) {return false;}
       return true;
@@ -248,6 +264,7 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
     if (!name) continue;
     let group = scoreGroups.get(name);
     if (!group) { group = { candidates: [], invalid: false }; scoreGroups.set(name, group); }
+    if (!isReportableEvidenceAdmissible(result, finding)) group.invalid = true;
     const parsedScore = /^(?:performance|accessibility|best-practices|seo) score:\s*(\d+(?:\.\d+)?)\/100(?:\.|$)/iu.exec(finding.observed)?.[1];
     const evidence = finding.evidence.filter(item => item.source === 'pagespeed');
     if (!parsedScore || !evidence.length) { group.invalid = true; continue; }
@@ -271,14 +288,16 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
     return [{ name, score: latest.score, url: latest.url, observedAt: latest.observedAt }];
   });
   const auditTargetIdentity = captureKey(result.target);
-  const scoreTargetConflict = scoreCandidates.length > 0 && (auditTargetIdentity === undefined || scoreCandidates.some(score => score.url.identity !== auditTargetIdentity));
-  const scoreUrlConflict = new Set(scoreCandidates.map(score => score.url.identity)).size > 1;
+  const observedScoreCandidates = [...scoreGroups.values()].flatMap(group => group.candidates);
+  const scoreTargetConflict = observedScoreCandidates.length > 0 && (auditTargetIdentity === undefined || observedScoreCandidates.some(score => score.url.identity !== auditTargetIdentity));
+  const scoreUrlConflict = new Set(observedScoreCandidates.map(score => score.url.identity)).size > 1;
   const scores = scoreTargetConflict || scoreUrlConflict ? [] : scoreCandidates;
   const performance = scores.find(s => s.name === 'performance');
   // Inclusive editorial review boundary; 50 is not claimed to be a failing PSI category.
   // Give this measured loading concern medium editorial priority so low-severity
-  // metadata checks cannot crowd it out of the customer briefing's three-topic cap.
+  // metadata checks cannot crowd it out of the customer briefing's six-topic cap.
   if (performance && performance.score <= 50 && result.findings.some(f => f.code === 'pagespeed_category_score' && f.evidence.some(e => e.value === performance.score && e.observedAt === performance.observedAt) && isReportableEvidenceAdmissible(result, f))) topics.push({ code: 'pagespeed_category_score', measurement: 'performance', severity: 2, rank: 20, title: t('Investigate mobile loading performance', 'Ladeleistung auf Smartphones untersuchen'), observed: t(`The tested page scored ${performance.score}/100 for mobile performance in PageSpeed Insights.`, `Die getestete Seite erreicht bei PageSpeed Insights ${performance.score}/100 für mobile Ladeleistung.`), why: t('This laboratory score is a reason to investigate, not a measurement of lost enquiries or bookings.', 'Dieser Laborwert ist ein Anlass zur Prüfung, keine Messung verlorener Anfragen oder Buchungen.'), action: t('Ask your developer to inspect the main loading bottlenecks. Check the journey from your main offer to enquiry or booking on a phone.', 'Lassen Sie die größten Ladeprobleme untersuchen. Prüfen Sie auf einem Smartphone den Weg vom Hauptangebot zur Anfrage oder Buchung.'), owner: t('Website developer', 'Webentwicklung'), urls: performance.url ? [performance.url] : [], group: 20 });
+  const reportableCodes = new Set(topics.map(topic => topic.code));
   const duplicateTitle = topics.find(topic => topic.code === 'duplicate_title_across_pages');
   const duplicateDescription = topics.find(topic => topic.code === 'duplicate_meta_description_across_pages');
   if (duplicateTitle && duplicateDescription) {
@@ -293,9 +312,12 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
   }
   // Severity comes first; editorial priority and affected-page count break ties.
   // Alias codes describe one topic, never extra cards to meet publication count.
-  const distinctTopics = topics.filter((topic, index) => !topics.slice(0, index).some(other => other.title === topic.title || topic.group === 50 && /alternative text|Alternativtext/iu.test(topic.title) && /alternative text|Alternativtext/iu.test(other.title)));
+  const preferredHeading = topics.filter(t => ['missing_h1', 'heading_hierarchy_skip'].includes(t.code)).sort((a,b) => (a.severity ?? 5) - (b.severity ?? 5) || (a.code === 'missing_h1' ? -1 : 1))[0]?.code;
+  const distinctTopics = topics.filter((topic, index) => !(['missing_h1', 'heading_hierarchy_skip'].includes(topic.code) && topic.code !== preferredHeading) && !topics.slice(0, index).some(other => other.title === topic.title || topic.group === 50 && /alternative text|Alternativtext/iu.test(topic.title) && /alternative text|Alternativtext/iu.test(other.title)));
   const ranked = distinctTopics.sort((a, b) => (a.severity ?? 5) - (b.severity ?? 5) || a.rank - b.rank || Number(b.urls.some(ref => commercial(ref.url))) - Number(a.urls.some(ref => commercial(ref.url))) || b.urls.length - a.urls.length || a.code.localeCompare(b.code));
-  const selected = ranked.slice(0, 3);
-  return { selected, scores, scoreUrlConflict, scoreTargetConflict, customerFindings };
+  const selected = ranked.slice(0, 6);
+  const deduplicatedIssues = countDeduplicatedIssues(reviewFindings.filter(finding => reportableCodes.has(finding.code)
+    && (finding.code !== 'pagespeed_category_score' || /^performance score:/iu.test(finding.observed))));
+  return { selected, scores, scoreUrlConflict, scoreTargetConflict, customerFindings, deduplicatedIssues };
 
 }

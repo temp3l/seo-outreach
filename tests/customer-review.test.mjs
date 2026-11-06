@@ -99,3 +99,17 @@ test('rejects oversized input, unsafe context references, duplicate roots, and m
   const duplicateRoot = context(); duplicateRoot.findings[1].code = duplicateRoot.findings[0].code;
   assert.throws(() => customerReviewTemplate(duplicateRoot), /customer_review_invalid/);
 });
+
+test('short reports require exactly their selected findings and exact hashes',()=>{
+ for(const count of [1,2,3,4,5]){
+  const ctx=context();ctx.findings=ctx.findings.slice(0,count);
+  const review=approved(ctx),bytes=encode(review);
+  assert.equal(validateCustomerReview(bytes,ctx).approvedFindings,count);
+  const omitted=structuredClone(review);omitted.findings.pop();
+  assert.throws(()=>validateCustomerReview(encode(omitted),ctx),/customer_review_(?:invalid|mismatch)/);
+  const stale=structuredClone(review);stale.reportPdfSha256=hash('other-report');
+  assert.throws(()=>validateCustomerReview(encode(stale),ctx),/customer_review_mismatch/);
+ }
+ const empty=context();empty.findings=[];assert.throws(()=>customerReviewTemplate(empty),/customer_review_invalid/);
+ const long=context();long.findings.push({...long.findings[0],id:'f'.repeat(24)});assert.throws(()=>customerReviewTemplate(long),/customer_review_invalid/);
+});

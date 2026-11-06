@@ -21,7 +21,7 @@ test('mobile report uses narrow print pages and retains a publication hold', asy
   assert.match(html, /Test Publisher/);
 });
 
-test('mobile pages keep padded headers and bottom footers without losing findings', async () => {
+test('mobile pages have edge-aligned banners, a contact footer only on the last page, and one closing footer', async () => {
   const browser = await chromium.launch({ headless: true });
   try {
     for (const locale of ['en', 'de']) for (const count of [1, 4, 5, 6]) {
@@ -43,14 +43,28 @@ test('mobile pages keep padded headers and bottom footers without losing finding
         const sheet = hero.closest('.mobile-sheet').getBoundingClientRect();
         return { width: hero.getBoundingClientRect().width, inset: title.getBoundingClientRect().left - sheet.left, overflows: title.scrollWidth > title.clientWidth + 1, wraps: getComputedStyle(title).whiteSpace !== 'nowrap' };
       });
-      assert.ok(Math.abs(header.width - 96 * 96 / 25.4) < 1);
-      assert.ok(Math.abs(header.inset - 10 * 96 / 25.4) < 1);
+      assert.ok(Math.abs(header.width - 108 * 96 / 25.4) < 1);
+      assert.ok(Math.abs(header.inset - 6 * 96 / 25.4) < 1);
       assert.equal(header.overflows, false);
       assert.equal(header.wraps, false);
       assert.equal(await page.locator('.card').count(), cardsBefore);
+      const badges=await page.locator('.snapshots').evaluate(row=>{
+        const parent=row.getBoundingClientRect();return [...row.children].map(e=>{const b=e.getBoundingClientRect();return {top:b.top,left:b.left,right:b.right,parentLeft:parent.left,parentRight:parent.right};});
+      });
+      assert.equal(badges.length,3);
+      assert.ok(Math.abs((badges[0].left-badges[0].parentLeft)-(badges.at(-1).parentRight-badges.at(-1).right))<1,'mobile badge row is horizontally centered');
+      assert.ok(badges.every(b=>Math.abs(b.top-badges[0].top)<=1 && b.left>=b.parentLeft-1 && b.right<=b.parentRight+1),'all three summary badges fit one mobile row');
       assert.equal(await page.locator('.mobile-sheet:last-child .card').count() > 0, true, 'closing page retains a finding with the invitation');
-      assert.equal(await page.locator('footer').count(), 1);
+      assert.equal(await page.locator('footer').count(),1);
+      assert.equal(await page.locator('.mobile-sheet:not(:last-child) footer').count(),0);
+      assert.equal(await page.locator('.offer').count(),1);
+      assert.equal(await page.locator('.mobile-sheet:last-child footer .offer').count(),1);
+      assert.equal(await page.locator('.mobile-content .offer').count(),0);
       assert.equal(await page.locator('.mobile-sheet:last-child footer').count(), 1);
+      const closingLines=await page.locator('.mobile-sheet:last-child .offer p').evaluate(p=>{
+        const range=document.createRange();range.selectNodeContents(p);return new Set([...range.getClientRects()].map(r=>Math.round(r.top))).size;
+      });
+      assert.equal(closingLines,1,'closing invitation fits one mobile line without smaller text');
       const layouts = await page.evaluate(() => Array.from(document.querySelectorAll('.mobile-sheet')).map(sheet => {
         const box = sheet.getBoundingClientRect();
         const footer = sheet.querySelector('footer')?.getBoundingClientRect();
@@ -60,9 +74,9 @@ test('mobile pages keep padded headers and bottom footers without losing finding
       for (const layout of layouts) {
         assert.ok(Math.abs(layout.height - 280 * 96 / 25.4) < 1);
         if (layout.footerGap !== null) {
-        assert.ok(Math.abs(layout.footerGap - 6 * 96 / 25.4) < 1);
-        assert.ok(layout.footerLeft > 0);
-        assert.ok(Math.abs(layout.footerWidth - 96 * 96 / 25.4) < 1);
+        assert.ok(Math.abs(layout.footerGap) < 1);
+        assert.ok(Math.abs(layout.footerLeft) < 1);
+        assert.ok(Math.abs(layout.footerWidth - 108 * 96 / 25.4) < 1);
         }
         for (const gap of [layout.leftGap, layout.rightGap]) assert.ok(Math.abs(gap - 6 * 96 / 25.4) < 1, JSON.stringify(layout));
         assert.equal(layout.overlap, false);
@@ -126,7 +140,20 @@ test('qualified mobile pagination keeps the final footer and rejects an overflow
       const info = execFileSync('pdfinfo', [path], { encoding: 'utf8' });
       assert.match(info, /Pages:\s+[2-9]/u); assert.match(info, /Page size:\s+306 x 793\.92 pts/u);
       const text = execFileSync('pdftotext', ['-layout', path, '-'], { encoding: 'utf8' }); assert.match(text, /issuer@example\.test/u); assert.match(text,/Missing search descriptions/u); assert.doesNotMatch(text, /HOLD/u);
+      const physical=text.split('\f').filter(page=>page.trim());
+      assert.ok(physical.slice(0,-1).every(page=>!page.includes(issuer.email)), 'earlier physical pages have no contact footer');
+      assert.ok(physical.at(-1).includes(issuer.email), 'the final physical page has the contact footer');
       await assert.rejects(renderMobileCustomerPdf(audit, async (html, options) => playwrightPdfRenderer(html.replace('</head>', '<style>.mobile-sheet .card{height:500mm!important}</style></head>'), options), issuer, 'en', 'CLIENT_READY', qualification), /mobile_report_block_exceeds_page|client_report_not_ready/u);
     });
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+
+test('actual mobile rendering rejects inset footers and a closing invitation positioned outside its footer',async()=>{
+ const {audit}=createEvidenceFixture(1);audit.coverage.urls[0].url=audit.target;audit.coverage.urls[0].finalUrl=audit.target;
+ audit.findings=[{code:'missing_meta_description',category:'metadata',observed:'Missing description',evidence:[{pageUrl:audit.target,source:'http',observedAt:audit.startedAt}]}];
+ const issuer={name:'Synthetic Reviewer',email:'reviewer@example.test'};
+ for(const css of ['.mobile-sheet .hero,.mobile-sheet .running-header{margin-left:0!important;margin-right:0!important}', '.mobile-sheet .issuer{margin-left:0!important;margin-right:0!important;margin-bottom:6mm!important}', '.mobile-sheet footer .offer{position:fixed!important;top:50mm!important;left:6mm!important}']){
+  await assert.rejects(renderMobileCustomerPdf(audit,(html,options)=>playwrightPdfRenderer(html.replace('</head>',`<style>${css}</style></head>`),options),issuer,'en','HOLD'),/client_report_not_ready: mobile|mobile_report_/);
+ }
 });

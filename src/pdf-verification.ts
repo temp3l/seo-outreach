@@ -45,11 +45,11 @@ function matchLogicalText(ops:Op[],fragments:Fragment[]):void {
 }
 
 /** Verify only the bounded PDF 1.4 subset emitted by this package's renderer. */
-export function verifyRenderedPdf(expected:CustomerPdfInput,bytes:Uint8Array):{status:'ARTIFACT_VERIFIED_ONLY';sha256:string;pageCount:number;findings:6} {
-  if(!expected||!Array.isArray(expected.findings)||expected.findings.length!==6||!(bytes instanceof Uint8Array)||bytes.length<64||bytes.length>MAX_PDF_BYTES) return fail();
+export function verifyRenderedPdf(expected:CustomerPdfInput,bytes:Uint8Array):{status:'ARTIFACT_VERIFIED_ONLY';sha256:string;pageCount:number;findings:number} {
+  if(!expected||!Array.isArray(expected.findings)||(expected.findings.length<1||expected.findings.length>6)||!(bytes instanceof Uint8Array)||bytes.length<64||bytes.length>MAX_PDF_BYTES) return fail();
   const doc=Buffer.from(bytes).toString('latin1');
   if(!doc.startsWith('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n')||!doc.endsWith('%%EOF\n')||/\/(?:JS|JavaScript|OpenAction|AA|Launch|EmbeddedFile|Filespec|URI|SubmitForm|ImportData|GoToR)\b/i.test(doc))return fail();
-  if(!Array.isArray(expected.findings)||new Set(expected.findings.map(f=>f.id)).size!==6||expected.findings.some(f=>typeof f.id!=='string'||!f.id))return fail();
+  if(!Array.isArray(expected.findings)||new Set(expected.findings.map(f=>f.id)).size!==expected.findings.length||expected.findings.some(f=>typeof f.id!=='string'||!f.id))return fail();
   const startAt=doc.lastIndexOf('startxref\n');if(startAt<0)return fail();
   const startMatch=/^startxref\n(\d+)\n%%EOF\n$/.exec(doc.slice(startAt));if(!startMatch)return fail();
   const xrefOffset=Number(startMatch[1]);if(!Number.isSafeInteger(xrefOffset)||xrefOffset!==doc.indexOf('xref\n'))return fail();
@@ -81,5 +81,5 @@ export function verifyRenderedPdf(expected:CustomerPdfInput,bytes:Uint8Array):{s
   for(const op of extracted){const width=pdfFontTextWidth(op.text,op.size,op.font==='F2');if(!Number.isFinite(width)||op.x+width>332.01)return fail();}
   const logical=expectedFragments(expected);matchLogicalText(extracted,logical);
   const sha256=createHash('sha256').update(bytes).digest('hex');
-  return {status:'ARTIFACT_VERIFIED_ONLY',sha256,pageCount,findings:6};
+  return {status:'ARTIFACT_VERIFIED_ONLY',sha256,pageCount,findings:expected.findings.length};
 }

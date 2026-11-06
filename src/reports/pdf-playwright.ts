@@ -1,3 +1,4 @@
+import { assertFrozenCustomerStyles } from './design-contract.js';
 import type { PdfRenderer } from './html.js';
 import { OperationDeadline, closeWithin } from './operation-deadline.js';
 import { paginateMobileReport } from './mobile.js';
@@ -42,6 +43,7 @@ export async function withPlaywrightPdfSession<T>(operation: (renderer: PdfRende
 export const playwrightPdfRenderer: PdfRenderer = (html, options) => renderPdf(html, options);
 
 async function renderPdf(html: string, options: Parameters<PdfRenderer>[1], session?: PdfSession): Promise<Uint8Array> {
+  assertFrozenCustomerStyles(html);
   const deadline = new OperationDeadline(options?.timeoutMs ?? 30_000, options?.signal, 'pdf_render_timeout', 'pdf_render_aborted');
   let browser: Browser | undefined;
   let context: BrowserContext | undefined;
@@ -79,7 +81,7 @@ async function renderPdf(html: string, options: Parameters<PdfRenderer>[1], sess
             const box = sheet.getBoundingClientRect();
             const footer = sheet.querySelector<HTMLElement>('footer');
             const last = index === sheets.length - 1;
-            if (Math.abs(box.width - 108 * mm) > 2 || Math.abs(box.height - 280 * mm) > 2 || (last && !footer) || (!last && footer)) return false;
+            if (Math.abs(box.width - 108 * mm) > 2 || Math.abs(box.height - 280 * mm) > 2 || (last ? !footer : Boolean(footer))) return false;
             const content = sheet.querySelector<HTMLElement>('.mobile-content');
             if (!content) return false;
             const contentBox = content.getBoundingClientRect();
@@ -90,12 +92,27 @@ async function renderPdf(html: string, options: Parameters<PdfRenderer>[1], sess
               if (footer && childBox.bottom > footer.getBoundingClientRect().top + 1) return false;
               if (!footer && childBox.bottom > box.bottom + 1) return false;
             }
-            return !footer || footer.getBoundingClientRect().bottom <= box.bottom + 1;
+            const header = sheet.querySelector<HTMLElement>('.hero,.running-header');
+            if (!header) return false;
+            const headerBox = header.getBoundingClientRect();
+            const flush = (a: number, b: number) => Math.abs(a-b) <= 1;
+            if (!flush(headerBox.left,box.left) || !flush(headerBox.right,box.right) || !flush(headerBox.top,box.top)) return false;
+            if (!footer) return !last && sheet.querySelectorAll('.offer').length === 0;
+            const footerBox = footer.getBoundingClientRect();
+            if (!flush(footerBox.left,box.left) || !flush(footerBox.right,box.right) || !flush(footerBox.bottom,box.bottom)) return false;
+            const invitation=footer.querySelector('.offer')?.getBoundingClientRect();
+            return last && sheet.querySelectorAll('.offer').length === 1 && !!invitation
+              && invitation.top >= footerBox.top-1 && invitation.bottom <= footerBox.bottom+1;
           });
         }
         const sheet = document.querySelector('.page');
         const footer = sheet?.querySelector('footer');
-        return !!sheet && !!footer && sheet.getBoundingClientRect().height <= 297 * 96 / 25.4 + 1 && footer.getBoundingClientRect().bottom <= sheet.getBoundingClientRect().bottom;
+        if (!sheet || !footer) return false;
+        const bounds=sheet.getBoundingClientRect(), foot=footer.getBoundingClientRect(), head=sheet.querySelector('.hero')?.getBoundingClientRect();
+        const offer=footer.querySelector('.offer')?.getBoundingClientRect();
+        const flush=(a:number,b:number)=>Math.abs(a-b)<=1;
+        return !!head && !!offer && bounds.height <= 297*96/25.4+1 && flush(head.top,bounds.top) && flush(head.left,bounds.left) && flush(head.right,bounds.right)
+          && flush(foot.bottom,bounds.bottom) && flush(foot.left,bounds.left) && flush(foot.right,bounds.right) && offer.top>=foot.top-1 && offer.bottom<=foot.bottom+1;
       }));
       if (!fits) throw new Error(html.includes('data-mobile-report="true"')
         ? 'client_report_not_ready: mobile content exceeds a 108mm x 280mm page'

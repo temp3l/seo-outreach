@@ -4,8 +4,8 @@ import { resolve } from 'node:path';
 
 export type Locale = 'en' | 'es' | 'de' | 'pt-BR';
 export type LiveCLI = { paidCallOptIn:true; configPath:string; statePath:string; batchId:string };
-type AnalyzeArgs = { command:'analyze'; input:string; out:string; locale:Locale; recorded?:string; crmExisting?:string; sellerName?:string; sellerLocation?:string; dryRun:boolean; live?:LiveCLI; providerPreview?:string };
-type BatchArgs = { command:'batch'; manifest:string; out:string; locale:Locale; crmExisting?:string; dryRun:boolean; live?:LiveCLI; providerPreview?:string };
+type AnalyzeArgs = { command:'analyze'; input:string; out:string; locale:Locale; recorded?:string; crmExisting?:string; sellerName?:string; sellerLocation?:string; reportContactFile?:string; outreachContext?:string; dryRun:boolean; live?:LiveCLI; providerPreview?:string };
+type BatchArgs = { sellerName?:string; sellerLocation?:string; reportContactFile?:string; outreachContext?:string; command:'batch'; manifest:string; out:string; locale:Locale; crmExisting?:string; dryRun:boolean; live?:LiveCLI; providerPreview?:string };
 type RenderArgs = { command:'render'; analysis:string; out:string; dryRun:boolean; customerReview?:string };
 export type ParsedArgs = AnalyzeArgs | BatchArgs | RenderArgs | { command:'help' };
 
@@ -16,22 +16,23 @@ export type Pipeline = {
 };
 
 const USAGE = [
-  'seo-outreach analyze --input <file> --out <directory> [--locale en|es|de|pt-BR] [--recorded <file>] [--crm-existing <prospects.json>] [--seller-name <name> --seller-location <location>] [--dry-run] [--paid-call --provider-config <file> --state <file> --batch-id <id>]',
-  'seo-outreach batch --manifest <file> --out <directory> [--locale en|es|de|pt-BR] [--crm-existing <prospects.json>] [--dry-run] [--paid-call --provider-config <file> --state <file> --batch-id <id>]',
-  'seo-outreach render --analysis <file> --out <directory> [--customer-review <file>] [--dry-run]',
+  'seo-outreach analyze --input <file> --out <directory> [--locale en|es|de|pt-BR] [--recorded <file>] [--crm-existing <prospects.json>] [--seller-name <name> [--seller-location <location>]] [--report-contact-file <private-json>] [--outreach-context <file>] [--dry-run] [--paid-call --provider-config <file> --state <file> --batch-id <id>]',
+  'seo-outreach batch --manifest <file> --out <directory> [--locale en|es|de|pt-BR] [--crm-existing <prospects.json>] [--seller-name <name> [--seller-location <location>]] [--report-contact-file <private-json>] [--outreach-context <file>] [--dry-run] [--paid-call --provider-config <file> --state <file> --batch-id <id>]',
+  'seo-outreach render --analysis <file> --out <directory> [--dry-run] (internal text PDFs only; customer PDFs: reports prepare/release)',
   'seo-outreach reports prepare --audit <json> --report-contact-file <private-json> --out <prefix> [--pdf-locale en|de]',
   'seo-outreach reports release --audit <json> --qualification <json> --review-manifest <json> --out <prefix>',
   'seo-outreach reports handoff --audit <json> --release <json> --message-file <txt> --company <id> --branch <id> --campaign <id> --out <json>',
   'seo-outreach --help'
 ].join('\n');
 
-const valueFlags = new Set(['--input','--out','--manifest','--analysis','--customer-review','--locale','--recorded','--crm-existing','--seller-name','--seller-location','--provider-config','--state','--batch-id']);
+const valueFlags = new Set(['--input','--out','--manifest','--analysis','--customer-review','--locale','--recorded','--crm-existing','--seller-name','--seller-location','--provider-config','--state','--batch-id','--outreach-context','--report-contact-file']);
 const commonFlags = new Set(['--out','--dry-run']);
 const validLocales = new Set<Locale>(['en','es','de','pt-BR']);
 const safePipelineErrors = new Set([
+  'customer_pdf_requires_frozen_design_use_reports_prepare_and_release',
   'invalid_json','unsupported_or_invalid_webcrawl_audit','recorded_output_invalid',
   'source_fingerprint_changed','source_changed_after_batch_preflight','destination_exists','invalid_output_directory','unsafe_output_path',
-  'customer_review_invalid','customer_review_mismatch','report_readback_failed','invalid_seller_identity','seller_identity_incomplete','invalid_crm_snapshot','prospect_capacity_exceeded',
+  'invalid_outreach_context','customer_review_invalid','customer_review_mismatch','report_readback_failed','invalid_seller_identity','seller_identity_incomplete','invalid_crm_snapshot','prospect_capacity_exceeded',
   'archive_input_size_invalid','archive_manifest_invalid','archive_manifest_hash_mismatch','archive_json_invalid','archive_member_corrupt',
   'archive_member_unsafe','archive_member_name_or_order_invalid','archive_members_missing','archive_pages_limit_or_format_invalid',
   'invalid_checker_coverage','archive_page_coverage_invalid','archive_coverage_metadata_invalid','archive_audit_coverage_mismatch','archive_false_complete_status','archive_target_mismatch','archive_decompression_invalid','archive_local_header_invalid',
@@ -47,7 +48,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   if (command === 'help') { if (argv.length === 1) return { command:'help' }; throw new Error('unexpected_help_arguments'); }
   if (!['analyze','batch','render'].includes(command)) throw new Error('unknown_command');
   if (argv.includes('--help')) { if (argv.length === 2) return { command:'help' }; throw new Error('unexpected_help_arguments'); }
-  const allowed = command === 'analyze' ? new Set(['--input','--out','--locale','--recorded','--crm-existing','--seller-name','--seller-location','--dry-run','--paid-call','--provider-config','--state','--batch-id']) : command === 'batch' ? new Set(['--manifest','--out','--locale','--crm-existing','--dry-run','--paid-call','--provider-config','--state','--batch-id']) : new Set(['--analysis','--out','--dry-run','--customer-review']);
+  const allowed = command === 'analyze' ? new Set(['--input','--out','--locale','--recorded','--crm-existing','--seller-name','--seller-location','--dry-run','--paid-call','--provider-config','--state','--batch-id','--outreach-context','--report-contact-file']) : command === 'batch' ? new Set(['--manifest','--out','--locale','--crm-existing','--seller-name','--seller-location','--dry-run','--paid-call','--provider-config','--state','--batch-id','--outreach-context','--report-contact-file']) : new Set(['--analysis','--out','--dry-run','--customer-review']);
   const values: Record<string,string> = {};
   let dryRun = false;
   let paidCall = false;
@@ -68,18 +69,19 @@ export function parseArgs(argv: string[]): ParsedArgs {
   if (command==='render' && liveSpecified) throw new Error('live_flags_not_supported_for_render');
   if (liveSpecified && !liveComplete) throw new Error('live_flags_must_be_provided_together');
   const live:LiveCLI|undefined=liveComplete?{paidCallOptIn:true,configPath:values['--provider-config']!,statePath:values['--state']!,batchId:values['--batch-id']!}:undefined;
+  if (command !== 'render' && values['--seller-location'] && !values['--seller-name']) throw new Error('seller_name_required');
+  if(values['--report-contact-file']&&(values['--seller-name']||values['--seller-location']))throw new Error('seller_identity_sources_conflict');
   if (command === 'analyze') {
     if (!values['--input'] || !values['--out']) throw new Error('analyze_input_and_out_required');
-    if (Boolean(values['--seller-name']) !== Boolean(values['--seller-location'])) throw new Error('seller_name_and_location_must_be_paired');
     const locale = (values['--locale'] ?? 'en') as Locale;
     if (!validLocales.has(locale)) throw new Error('unknown_locale');
-    return { command, input:values['--input'], out:values['--out'], locale, recorded:values['--recorded'], ...(values['--crm-existing']?{crmExisting:values['--crm-existing']}:{}) , sellerName:values['--seller-name'], sellerLocation:values['--seller-location'], dryRun, ...(live?{live}:{}) };
+    return { command, input:values['--input'], out:values['--out'], locale, ...(values['--outreach-context']?{outreachContext:values['--outreach-context']} : {}), ...(values['--report-contact-file']?{reportContactFile:values['--report-contact-file']} : {}), recorded:values['--recorded'], ...(values['--crm-existing']?{crmExisting:values['--crm-existing']}:{}) , sellerName:values['--seller-name'], sellerLocation:values['--seller-location'], dryRun, ...(live?{live}:{}) };
   }
   if (command === 'batch') {
     if (!values['--manifest'] || !values['--out']) throw new Error('batch_manifest_and_out_required');
     const locale = (values['--locale'] ?? 'en') as Locale;
     if (!validLocales.has(locale)) throw new Error('unknown_locale');
-    return { command, manifest:values['--manifest'], out:values['--out'], locale, ...(values['--crm-existing']?{crmExisting:values['--crm-existing']}:{}) , dryRun, ...(live?{live}:{}) };
+    return { command, ...(values['--seller-name']?{sellerName:values['--seller-name'],sellerLocation:values['--seller-location']} : {}), manifest:values['--manifest'], out:values['--out'], locale, ...(values['--outreach-context']?{outreachContext:values['--outreach-context']} : {}), ...(values['--report-contact-file']?{reportContactFile:values['--report-contact-file']} : {}), ...(values['--crm-existing']?{crmExisting:values['--crm-existing']}:{}) , dryRun, ...(live?{live}:{}) };
   }
   if (!values['--analysis'] || !values['--out']) throw new Error('render_analysis_and_out_required');
   return { command:'render', analysis:values['--analysis'], out:values['--out'], dryRun, ...(values['--customer-review']?{customerReview:values['--customer-review']}:{}) };
@@ -141,7 +143,7 @@ async function main(): Promise<void> {
     const pipeline = await import('./pipeline.js') as unknown as Pipeline;
     code = await runCli(argv,pipeline,{stdout:s=>process.stdout.write(`${s}\n`),stderr:s=>process.stderr.write(`${s}\n`)});
   } catch (e) {
-    const error = e instanceof Error && ['command_required','unknown_command','unknown_or_inapplicable_flag','unexpected_positional_argument','duplicate_flag','flag_value_required','analyze_input_and_out_required','batch_manifest_and_out_required','render_analysis_and_out_required','seller_name_and_location_must_be_paired','unknown_locale','unexpected_help_arguments','invalid_arguments','live_flags_must_be_provided_together','live_flags_not_supported_for_render','provider_config_path_required_api_keys_not_accepted'].includes(e.message) ? e.message : 'operation_failed';
+    const error = e instanceof Error && ['command_required','unknown_command','unknown_or_inapplicable_flag','unexpected_positional_argument','duplicate_flag','flag_value_required','analyze_input_and_out_required','batch_manifest_and_out_required','render_analysis_and_out_required','seller_name_required','seller_identity_sources_conflict','unknown_locale','unexpected_help_arguments','invalid_arguments','live_flags_must_be_provided_together','live_flags_not_supported_for_render','provider_config_path_required_api_keys_not_accepted'].includes(e.message) ? e.message : 'operation_failed';
     process.stderr.write(`${JSON.stringify({ok:false,error})}\n`); code = error === 'operation_failed' ? 1 : 2;
   }
   process.exitCode = code;

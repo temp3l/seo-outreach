@@ -8,8 +8,9 @@ test('parses the three explicit commands and their options',()=>{
   assert.deepEqual(parseArgs(['render','--analysis','analysis.json','--out','out']),{command:'render',analysis:'analysis.json',out:'out',dryRun:false});
 });
 
-test('accepts seller identity only as a pair and validates locales',()=>{
-  assert.throws(()=>parseArgs(['analyze','--input','a','--out','b','--seller-name','Sam']),/paired/);
+test('accepts a seller name without location and validates locales',()=>{
+  assert.equal(parseArgs(['analyze','--input','a','--out','b','--seller-name','Sam']).sellerName,'Sam');
+  assert.throws(()=>parseArgs(['analyze','--input','a','--out','b','--seller-location','Tarifa']),/seller_name_required/);
   assert.throws(()=>parseArgs(['batch','--manifest','a','--out','b','--locale','fr']),/locale/);
   assert.deepEqual(parseArgs(['analyze','--input','a','--out','b','--seller-name','Sam','--seller-location','Tarifa']).command,'analyze');
 });

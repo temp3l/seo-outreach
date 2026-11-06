@@ -15,6 +15,7 @@ const options = (files, out) => ['--audit', files.audit, '--qualification', file
 
 async function setup(root) {
   const { audit } = createEvidenceFixture(3);
+  audit.target = audit.coverage.urls[0].url;
   audit.startedAt = new Date(Date.now() - 120_000).toISOString();
   audit.completedAt = new Date(Date.now() - 90_000).toISOString();
   audit.findings = [{ code: 'missing_meta_description', category: 'metadata', observed: 'Synthetic missing description', severity: 'medium', evidence: [{ pageUrl: audit.coverage.urls[0].url, source: 'http', observedAt: audit.completedAt }]}];

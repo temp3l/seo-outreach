@@ -1,0 +1,49 @@
+{
+  "schema": "spora-pdf-design-approval-v1",
+  "design": "customer-pdf-v6-20261106",
+  "status": "APPROVED_FROZEN",
+  "approvalType": "DESIGN_ONLY",
+  "approvedAt": "2026-11-06T11:04:40.586160+00:00",
+  "operatorInstruction": "ok, perfect -lets freeze this design!",
+  "designLockSha256": "b077ab04973d6d3ad5d7859f184c2582b9b068e770bf7b6c9a5c4d2e20f0aa8e",
+  "visualManifestSha256": "a4348f8fd790076c0c8a2169c2a2d2c3f661f4914d35ebe0a7fd8178dc33b6a4",
+  "referencePdfs": [
+    {
+      "path": "docs/pdf-design-approved/customer-pdf-v6-20261106/WC-005-bella-fiss-kite-school/report.mobile.pdf",
+      "site": "WC-005-bella-fiss-kite-school",
+      "role": "mobile",
+      "locale": "en",
+      "pages": 3,
+      "bytes": 66877,
+      "sha256": "58301975db1b999ca9ce55decf45a86db53bb116f3d5a7d0d00fee0af1c1d41b"
+    },
+    {
+      "path": "docs/pdf-design-approved/customer-pdf-v6-20261106/WC-005-bella-fiss-kite-school/report.pdf",
+      "site": "WC-005-bella-fiss-kite-school",
+      "role": "a4",
+      "locale": "en",
+      "pages": 1,
+      "bytes": 64331,
+      "sha256": "2a5fb564602a665ab4257e216d817c6f7c0f529d4a4b7553010cfed0b1ea0a93"
+    },
+    {
+      "path": "docs/pdf-design-approved/customer-pdf-v6-20261106/WC-015-good-vibes-kiteschool/report.mobile.pdf",
+      "site": "WC-015-good-vibes-kiteschool",
+      "role": "mobile",
+      "locale": "en",
+      "pages": 2,
+      "bytes": 60344,
+      "sha256": "39754c68f63437debe886ae054364c2c95681035b802acd63c204aee1d91cf20"
+    },
+    {
+      "path": "docs/pdf-design-approved/customer-pdf-v6-20261106/WC-015-good-vibes-kiteschool/report.pdf",
+      "site": "WC-015-good-vibes-kiteschool",
+      "role": "a4",
+      "locale": "en",
+      "pages": 1,
+      "bytes": 58996,
+      "sha256": "5587f869372b43b782a4e4ae2392be2275b997dc297d3a812999f8d348e5f003"
+    }
+  ],
+  "futureChanges": "Require an explicit user request. Never refresh references or the lock merely to silence a failing check."
+}

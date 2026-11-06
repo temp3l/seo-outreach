@@ -93,3 +93,15 @@ test('oversized response body is bounded and remains ambiguous',async()=>{
   const result=await generateSalesOutput(digest,'en',{config,spend,fetchImpl:async()=>new Response(big)});
   assert.equal(result.status,'AMBIGUOUS');
 });
+
+
+test('one opportunity per selected finding is valid through six and matches request schema limits',async()=>{
+ const issues=Array.from({length:4},(_,i)=>({...digest.issues[0],id:`issue-${i}`,code:['missing_title','missing_h1','missing_meta_description','images_missing_dimensions'][i]}));
+ const d={...digest,issues};
+ const output={...generated,selectedIssueIds:issues.map(i=>i.id),opportunities:issues.map(i=>({title:'Review page',issueIds:[i.id],rationale:'Review the supported finding.'})),salesAngle:{text:'Review findings',issueIds:issues.map(i=>i.id)},findings:issues.map(i=>({issueId:i.id,implication:'Review the page.',proposedFix:'Check the supported observation.'}))};
+ assert.equal(validateRecordedOutput(output,d,'en').ok,true);
+ let sent;
+ const result=await generateSalesOutput(d,'en',{config:{...config,maxInputTokens:32000,companyTokenCap:40000},spend:{...spend,companyTokensReserved:40000,batchTokensReserved:40000},fetchImpl:async(_url,init)=>{sent=JSON.parse(init.body);return response({id:'resp_four',status:'completed',output_text:JSON.stringify(output)});}});
+ assert.ok(sent);assert.equal(sent.text.format.schema.properties.opportunities.maxItems,6);assert.equal(sent.text.format.schema.properties.findings.maxItems,6);
+ assert.equal(result.status,'COMPLETED');
+});

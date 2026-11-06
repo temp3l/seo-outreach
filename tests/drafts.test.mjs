@@ -19,7 +19,7 @@ test('creates unsent, permission-based drafts and fixed status/length metadata',
 });
 
 test('missing seller identity uses natural placeholders and HOLD outside message text in every locale', () => {
-  const identityText={en:'[YOUR NAME], and I’m based in [YOUR LOCATION]',es:'[YOUR NAME] y estoy en [YOUR LOCATION]',de:'Mein Standort ist [YOUR LOCATION]', 'pt-BR':'[YOUR NAME] e estou em [YOUR LOCATION]'};
+  const identityText={en:'[YOUR NAME]',es:'[YOUR NAME]',de:'[YOUR NAME]','pt-BR':'[YOUR NAME]'};
   for(const [locale,phrase] of Object.entries(identityText)) {
     const d = buildDrafts(sample({seller:null,locale}));
     assert.equal(d.status, 'HOLD'); assert.equal(d.holdReasons.length, 1);
@@ -62,4 +62,13 @@ test('rejects unsafe, oversized, contact-bearing, or unknown fields', () => {
   assert.throws(() => buildDrafts(sample({locale:'fr'})), /locale/);
   assert.throws(() => buildDrafts({...sample(), extra:true}), /unexpected/);
   assert.throws(() => buildDrafts(sample({finding:{...sample().finding, observed:'x'.repeat(601)}})), /600 characters/);
+});
+
+
+test('seller name and email work without a location or invented location placeholder',()=>{
+ for(const locale of ['en','es','de','pt-BR']){
+  const d=buildDrafts(sample({locale,seller:{name:'Alex',email:'alex@example.com'}}));
+  assert.equal(d.status,'READY_FOR_REVIEW');assert.match(d.opener,/Alex/);
+  assert.doesNotMatch(d.opener,/YOUR LOCATION|based in|estoy en|Standort|estou em/);
+ }
 });

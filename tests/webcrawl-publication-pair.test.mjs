@@ -12,20 +12,21 @@ function qualify(audit){return {decision:'RELEASE',target:audit.target,auditSha2
 function recount(audit){const groups=new Map();for(const f of audit.findings){const row=groups.get(f.code)??{records:0,pages:new Set(),evidenceOccurrences:0};row.records++;row.evidenceOccurrences+=f.evidence.length;f.evidence.forEach(e=>row.pages.add(e.pageUrl));groups.set(f.code,row);}audit.coverage.findings={records:audit.findings.length,checkCodes:groups.size,affectedPages:new Set(audit.findings.flatMap(f=>f.evidence.map(e=>e.pageUrl))).size,evidenceOccurrences:audit.findings.reduce((n,f)=>n+f.evidence.length,0),byCheck:[...groups].map(([code,row])=>({code,records:row.records,affectedPages:row.pages.size,evidenceOccurrences:row.evidenceOccurrences}))};}
 function fixture() {
  const {audit}=createEvidenceFixture(1);
+ audit.target=audit.coverage.urls[0].url;
  audit.startedAt=new Date(Date.now()-60_000).toISOString();audit.completedAt=new Date().toISOString();
  audit.findings=['missing_canonical','missing_meta_description','title_long','images_missing_dimensions','missing_h1','heading_hierarchy_skip'].map(code=>({code,category:'content',observed:code,evidence:[{pageUrl:audit.coverage.urls[0].url,source:'http',observedAt:audit.startedAt}]}));
  recount(audit);
  return audit;
 }
 const decode=bytes=>Buffer.from(bytes).toString();
-test('both locales must pass: layout failure retains three selected cards in HOLD',async()=>{
+test('both locales must pass: layout failure retains every supported selected card in HOLD',async()=>{
  for(const count of [4,5,6]) for(const failedLocale of ['en','de']) {
   const audit=fixture();audit.findings=audit.findings.slice(0,count);recount(audit);const before=JSON.stringify(audit);const calls=[];
   assert.ok(isAuditResultRecord(audit));assert.equal(isCustomerReleaseQualified(audit,qualify(audit)),true);
   const pair=await renderCustomerPdfPair(audit,async html=>{calls.push(html);if(html.includes(`lang="${failedLocale}"`)&&html.includes('data-client-ready="true"'))throw Error('client_report_not_ready: content exceeds one A4 page');return Buffer.from(html);},issuer,qualify(audit));
   assert.equal(pair.status,'HOLD');
   assert.ok(calls.some(html=>html.includes(`lang="${failedLocale}"`)&&html.includes('data-client-ready="true"')),'the requested locale must actually reach the release layout check');
-  for(const bytes of [pair.en,pair.de]){const html=decode(bytes);assert.match(html,/data-publication-status="HOLD"/);assert.match(html,/data-client-ready="false"/);assert.doesNotMatch(html.replace(/<body\b[^>]*>/u,'<body>'),/\bHOLD\b|NOT FOR CUSTOMER DISTRIBUTION|NICHT ZUR KUNDENWEITERGABE/u);assert.equal((html.match(/<article class="card">/g)??[]).length,3);}
+  for(const bytes of [pair.en,pair.de]){const html=decode(bytes);assert.match(html,/data-publication-status="HOLD"/);assert.match(html,/data-client-ready="false"/);assert.doesNotMatch(html.replace(/<body\b[^>]*>/u,'<body>'),/\bHOLD\b|NOT FOR CUSTOMER DISTRIBUTION|NICHT ZUR KUNDENWEITERGABE/u);assert.equal((html.match(/<article class="card">/g)??[]).length,count===4?3:4);}
   assert.equal(calls.filter(h=>h.includes('data-publication-status="HOLD"')).length,2);assert.equal(JSON.stringify(audit),before);
  }
 });

@@ -10,7 +10,7 @@ test('audit-shaped trip destinations retain identity without attributing their 4
  a.findings=[1,2].map(n=>{const target=`${home}?post_type=trip&p=${n}`;return {code:'broken_internal_link',category:'links',observed:'Internal destination returned HTTP 404.',evidence:[{pageUrl:target,requestedUrl:target,finalUrl:target,observedAt:at,source:'http',value:404},{pageUrl:home,anchorHref:target,requestedUrl:target,observedAt:at,source:'http',value:404}]};});
  a.coverage.urls=a.findings.flatMap(f=>f.evidence.map(e=>({url:e.pageUrl,finalUrl:e.pageUrl,outcome:'captured',statusCode:e.anchorHref?200:404})));
  const text=renderWhatsAppDraft(a);assert.doesNotMatch(text,/post_type|p=|linked to .*which returned HTTP/);assert.match(text,/destination is withheld/);
- const html=renderCustomerSummaryHtml(a);assert.match(html,/2 distinct broken destinations/);assert.match(html,/1 referring pages/);
+ const html=renderCustomerSummaryHtml(a);assert.match(html,/2 distinct broken destinations/);assert.match(html,/1 referring page\b/);
 });
 test('transactional noindex stays private while commercial noindex remains reviewable',()=>{
  const a=createEvidenceFixture(1).audit;const at=a.completedAt;

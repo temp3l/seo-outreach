@@ -3,7 +3,7 @@ import type { AuditFinding, AuditResult, CrawlUrlOutcome, FindingEvidence } from
 import { isAuditResultRecord } from '@spora/webcrawl/evidence';
 import { hasIncompleteCrawl } from '@spora/webcrawl/evidence';
 import { reportPageReference } from './references.js';
-import { customerBriefing } from './customer.js';
+import { customerPriorityProjection } from './customer.js';
 
 /** Explicit operator/workflow qualification for releasing one exact audit. */
 export type CustomerReleaseQualification = Readonly<{
@@ -15,7 +15,6 @@ export function auditResultSha256(result: AuditResult): string {
   return createHash('sha256').update(JSON.stringify(result)).digest('hex');
 }
 
-const privateSecurityCodes = new Set(['sensitive_form_over_http', 'sensitive_form_to_external_origin', 'password_form_on_http']);
 export const reportableCodes = new Set([
   'broken_internal_link', 'http_status_error', 'noindex', 'missing_canonical', 'robots_policy_unavailable',
   'missing_meta_description', 'meta_description_length', 'duplicate_meta_description_across_pages',
@@ -142,12 +141,28 @@ function successfulCaptured(raw: string, result: AuditResult, captures = capture
   return !!row && row.outcome === 'captured' && row.statusCode !== undefined && row.statusCode >= 200 && row.statusCode < 400;
 }
 
-function validAllReportEvidence(result: AuditResult, start: number, end: number): boolean {
-  for (const finding of result.findings) if (reportableCodes.has(finding.code) && !isReportableEvidenceAdmissible(result, finding, start, end)) return false;
-  return customerBriefing(result, 'en').includes('<article class="card">');
+export type CustomerReportReadiness = Readonly<{
+  status: 'READY_FOR_REVIEW' | 'BLOCKED';
+  blockers: readonly string[]; warnings: readonly string[]; selectedTopics: number;
+}>;
+
+/** Report quality is scoped to the claims selected for the customer briefing.
+ * A crawl or optional check gap is disclosed, not a whole-report veto. This
+ * assessment never grants release, business identity or sending approval. */
+export function assessCustomerReportReadiness(result: AuditResult): CustomerReportReadiness {
+  if (!isAuditResultRecord(result)) return { status: 'BLOCKED', blockers: ['invalid_audit'], warnings: [], selectedTopics: 0 };
+  const selectedTopics = customerPriorityProjection(result).selected.length;
+  const blockers = selectedTopics ? [] : ['no_supported_customer_findings'];
+  const warnings: string[] = [];
+  if (hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls)) warnings.push('captured_scope_only');
+  if (Object.values(result.coverage?.checks ?? {}).some(check => check.status !== 'complete' && check.status !== 'disabled')) warnings.push('check_coverage_gaps');
+  if (result.findings.some(finding => reportableCodes.has(finding.code) && !isReportableEvidenceAdmissible(result, finding))) warnings.push('unsupported_findings_omitted');
+  return { status: blockers.length ? 'BLOCKED' : 'READY_FOR_REVIEW', blockers, warnings, selectedTopics };
 }
 
-/** Missing, stale, mismatched, incomplete, or private evidence always fails closed. */
+/** Release requires an exact, fresh audit and explicit operator review.
+ * coverage ACCEPTED acknowledges disclosed scope; security CLEARED means the
+ * selected report is safe to share, not that every site check completed. */
 export function isCustomerReleaseQualified(result: AuditResult, value: unknown, now = Date.now()): value is CustomerReleaseQualification {
   if (!isAuditResultRecord(result) || !value || typeof value !== 'object' || Array.isArray(value)) return false;
   const q = value as Partial<CustomerReleaseQualification>;
@@ -157,12 +172,5 @@ export function isCustomerReleaseQualified(result: AuditResult, value: unknown, 
   const started = time(result.startedAt), completed = time(result.completedAt), qualified = time(q.qualifiedAt);
   if (![started, completed, qualified].every(Number.isFinite) || completed < started || completed > now + skew
     || qualified < completed - skew || qualified > now + skew || now - started > 24 * 60 * 60_000 || qualified - started > 24 * 60 * 60_000) return false;
-  const checks = result.coverage?.checks;
-  if (result.capabilities.http !== 'complete' || result.capabilities.technicalSeo !== 'complete'
-    || !checks || ['securityHeaders', 'mixedContent', 'sensitiveForms', 'cookieAttributes'].some(name => {
-      const check = checks[name as keyof typeof checks];
-      return check?.status !== 'complete' || check.checked !== check.discovered || check.failed !== 0 || check.skipped !== 0 || check.unattempted !== 0;
-    }) || hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls)
-    || result.findings.some(finding => privateSecurityCodes.has(finding.code))) return false;
-  return validAllReportEvidence(result, started, completed);
+  return assessCustomerReportReadiness(result).status === 'READY_FOR_REVIEW';
 }

@@ -26,7 +26,7 @@ function validate(v: unknown): asserts v is CustomerPdfInput {
   for (const k of ['company','opening','coverage','nextStep']) if (typeof x[k] !== 'string' || !(x[k] as string).trim()) throw new TypeError(`${k} must be a nonempty string`);
   if (!['en','es','de','pt-BR'].includes(x.locale as string)) throw new TypeError('Unsupported locale');
   if (!Array.isArray(x.opportunities) || x.opportunities.length < 1 || x.opportunities.length > 3 || x.opportunities.some(s => typeof s !== 'string' || !s.trim())) throw new TypeError('Provide one to three opportunities');
-  if (!Array.isArray(x.findings) || x.findings.length !== 6) throw new TypeError('Exactly six findings are required');
+  if (!Array.isArray(x.findings) || (x.findings.length < 1 || x.findings.length > 6)) throw new TypeError('One to six findings are required');
   const ids = new Set<string>();
   for (const f of x.findings) {
     if (!f || typeof f !== 'object' || Array.isArray(f)) throw new TypeError('Invalid finding');

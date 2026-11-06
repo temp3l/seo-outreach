@@ -27,6 +27,7 @@ test('PT projection excludes blog tags and unrelated retail products from school
 });
 test('PT projection groups repeated links only for confirmed 404 or 410, not denied or unknown',()=>{
  const {audit,home}=setup();audit.findings=[]; const destination=new URL('/curso-ausente/',home).href;
+ audit.coverage.urls.push({url:destination,outcome:'captured',statusCode:404});
  const linked=(status)=>({code:'broken_internal_link',category:'indexability',observed:'link',evidence:[evidence(destination,{value:status,requestedUrl:destination}),...Array.from({length:30},()=>evidence(home,{value:status,anchorHref:destination,requestedUrl:destination}))]});
  audit.findings=[linked(404),linked(404)];assert.equal(portugueseOpportunities(audit).length,1);audit.findings=[linked(403)];assert.equal(portugueseOpportunities(audit).length,0);audit.findings=[linked(429)];assert.equal(portugueseOpportunities(audit).length,0);
 });

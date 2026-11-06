@@ -40,8 +40,8 @@ test('customer copy rejects opaque page IDs while the internal review builder re
   assert.throws(()=>buildCustomerReportPdfInput(decision),/usable same-company page URL/);
 });
 
-test('rejects fewer than six findings, duplicate IDs/root causes, unsupported issues, and cross-host references',()=>{
-  const a=fixture(); a.findings.pop(); assert.throws(()=>buildReportPdfInput(a),/Exactly six/);
+test('rejects empty findings, duplicate IDs/root causes, unsupported issues, and cross-host references',()=>{
+  const a=fixture(); a.findings=[]; assert.throws(()=>buildReportPdfInput(a),/One to six/);
   const b=fixture(); b.findings[5].id=b.findings[0].id; assert.throws(()=>buildReportPdfInput(b),/distinct/);
   const c=fixture(); c.findings[5].code=c.findings[0].code; assert.throws(()=>buildReportPdfInput(c),/distinct supported/);
   const d=fixture(); d.findings[0].reference='https://other.example/'; assert.throws(()=>buildReportPdfInput(d),/same-company/);
@@ -101,4 +101,33 @@ test('coverage counts and closing next step stay on the same page when they fit'
  assert.ok(streams[coverage].includes('(Next step)'));
  assert.ok(streams[coverage].includes('unattempted: 1223'));
  assert.ok(streams[coverage].includes('499.'));
+});
+
+test('one to five supported findings render without padding and retain coverage disclosures',()=>{
+ for(const count of [1,2,3,4,5])for(const locale of ['en','es','de','pt-BR']){
+  const d=fixture(locale);d.findings=d.findings.slice(0,count);
+  const internal=buildReportPdfInput(d),customer=buildCustomerReportPdfInput(d);
+  assert.equal(internal.findings.length,count);assert.equal(customer.findings.length,count);
+  assert.doesNotMatch(customer.opening,/\bsix\b|\bseis\b|\bsechs\b/i);
+  const result=verifyRenderedPdf(customer,renderCustomerPdf(customer));assert.equal(result.findings,count);
+  assert.match(customer.coverage,/unattempted: 3|no intentadas: 3|nicht versucht: 3|não tentadas: 3/);
+  assert.throws(()=>verifyRenderedPdf({...customer,findings:[]},renderCustomerPdf(customer)),/verification failed/);
+ }
+ const tooMany=fixture();tooMany.findings.push({...tooMany.findings[0],id:'f'.repeat(24)});
+ assert.throws(()=>buildReportPdfInput(tooMany),/One to six/);
+});
+
+
+test('four through six distinct findings render and verify in every locale, without padding',()=>{
+  for(const locale of ['en','es','de','pt-BR']) for(const count of [4,5,6]) {
+    const decision=fixture(locale); decision.findings=decision.findings.slice(0,count);
+    for(const build of [buildReportPdfInput,buildCustomerReportPdfInput]) {
+      const input=build(decision), bytes=renderCustomerPdf(input);
+      assert.equal(input.findings.length,count);
+      assert.equal(verifyRenderedPdf(input,bytes).findings,count);
+      assert.doesNotMatch(input.nextStep,/quote|pricing|fixed.price|precio|preço|Festpreis/i);
+    }
+  }
+  const seven=fixture();seven.findings.push({...seven.findings[0],id:'f'.repeat(24)});
+  assert.throws(()=>buildReportPdfInput(seven),/One to six/);
 });

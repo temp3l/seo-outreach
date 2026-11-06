@@ -1,0 +1,147 @@
+{
+  "scope": "Reviewed edge-aligned customer layout: body gutters, footer invitation, repeated mobile contact footer; synthetic EN/DE/PT-BR fixtures.",
+  "dpi": 144,
+  "results": [
+    {
+      "id": "a4-en",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "beforeSha256": "eaa1ecdc474e81728f78ad38937b8c1d719cb884caca766181f28cf88358367a",
+      "htmlSha256": "ecbd27d313b59b9a9c566c60140e50836005abfed15591ea89a1a87c78d67754",
+      "text": "WEBSITE REVIEW                                                                            Website checked \u00b7 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n\n  1 captured response        3 topics to review\n\n\n  Tested page \u00b7 Mobile lab page\n  No usable scores were available. Ask your website provider to repeat the mobile measurement before drawing\n  conclusions about speed.\n\n\nKey observations\n\n  1 page to review\n  Preferred page versions\n  Example page: Page 000\n  These settings can be intentional. The crawl does not establish whether Google lists a page.\n  Next step: Tell your website provider which offers should be found in search. Have them check these settings\n  before changing anything.\n\n\n  1 page to review\n  Missing search descriptions\n  Example page: Page 000\n  Clear wording can help people distinguish your offers. Search engines may choose different text.\n  Next step: Review whether these pages belong with the current offers before editing descriptions. Confirm their\n  purpose with the owner; retain intentional archives.\n\n\n  1 page to review\n  Missing main headings\n  Example page: Page 000\n  Headings help visitors and screen-reader users understand the offer. These observations do not prove a ranking\n  problem.\n  Next step: Ask your editor to check the affected pages. Make the main offer clear and arrange headings in a\n  useful reading order.\n\n\n\n\nLet\u2019s get in touch\nContact us using the reply details below to discuss this archived review.\n\nSynthetic PDF Review \u00b7 Example Studio         review@example.test \u00b7 +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "9cdf9080a65ec4102ca64ac463ef51ba38007442b7eb19fe572cc6ac6ceb4813"
+      ],
+      "pdfSha256": "29275a444ba3c1d06433776e8d8946b1a2077580b6c87b949f625e7c01f2e13a"
+    },
+    {
+      "id": "a4-de",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "beforeSha256": "9541bf0f5a056d3dbddeba83d10c115c8691d54a2d643984900ab55d7454eafc",
+      "htmlSha256": "edef16078415f2fb43616fa99e09371b3b81c7462dc2cfd38c857fb0f0aeaca8",
+      "text": "WEBSITE-PR\u00dcFUNG                                                                              Website gepr\u00fcft \u00b7 29.10.2026\n\n\nfixture.example\nWas Aufmerksamkeit verdient\n\n\n\n  1 erfasste Antwort        3 Themen zum Pr\u00fcfen\n\n\n  Gepr\u00fcfte Seite \u00b7 Mobile Labormessung\n  Es lagen keine nutzbaren Werte vor. Lassen Sie die mobile Messung wiederholen, bevor Sie R\u00fcckschl\u00fcsse zur\n  Geschwindigkeit ziehen.\n\n\nWichtige Beobachtungen\n\n  1 Seite pr\u00fcfen\n  Bevorzugte Seitenversionen\n  Beispielseite: Page 000\n  Diese Einstellungen k\u00f6nnen beabsichtigt sein. Die Pr\u00fcfung zeigt nicht, ob Google eine Seite listet.\n  N\u00e4chster Schritt: Teilen Sie Ihrer Website-Betreuung mit, welche Angebote in der Suche erscheinen sollen.\n  Lassen Sie die Einstellungen vor \u00c4nderungen pr\u00fcfen.\n\n\n  1 Seite pr\u00fcfen\n  Fehlende Suchbeschreibungen\n  Beispielseite: Page 000\n  Klare Texte helfen Menschen, Angebote zu unterscheiden. Suchmaschinen k\u00f6nnen andere Texte anzeigen.\n  N\u00e4chster Schritt: Pr\u00fcfen Sie vor Text\u00e4nderungen, ob diese Seiten zum aktuellen Angebot geh\u00f6ren. Kl\u00e4ren Sie\n  ihren Zweck mit dem Betrieb; behalten Sie beabsichtigte Archive.\n\n\n  1 Seite pr\u00fcfen\n  Fehlende Haupt\u00fcberschriften\n  Beispielseite: Page 000\n  \u00dcberschriften helfen beim Verstehen des Angebots und bei der Nutzung mit Screenreader. Diese Beobachtungen\n  belegen kein Rankingproblem.\n  N\u00e4chster Schritt: Lassen Sie die betroffenen Seiten redaktionell pr\u00fcfen. Benennen Sie das Hauptangebot klar\n  und ordnen Sie \u00dcberschriften sinnvoll.\n\n\n\n\nLassen Sie uns sprechen\nKontaktieren Sie uns \u00fcber die unten stehenden Angaben, um diese archivierte Pr\u00fcfung zu besprechen.\n\nSynthetic PDF Review \u00b7 Example Studio      review@example.test \u00b7 +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "0c3667e653d8e7549ed461eab1592419efdb5c8f798793075dee6deda97a9a8c"
+      ],
+      "pdfSha256": "c107eec8f7fd1880164f7195cf1b74bc90f8cecd06fa4f321d3cc04cb3a42019"
+    },
+    {
+      "id": "a4-pt-BR",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "beforeSha256": "d7784a45ff41b79ec598f9a5d19aacdf2bb585bff9877f77aab2166add5ee16e",
+      "htmlSha256": "38d4a210fe5ec9ef458412e5fef49cdfddad331af57fce4ceef9aeb2f91f5cf4",
+      "text": "REVIS\u00c3O DO SITE\n\nfixture.example\nObserva\u00e7\u00e3o arquivada em 29 de outubro de 2026\n\n\n\n\n Esta revis\u00e3o cobre apenas as p\u00e1ginas e verifica\u00e7\u00f5es registradas na coleta. N\u00e3o confirma o estado atual\n do site, tr\u00e1fego, posi\u00e7\u00f5es ou reservas. A contagem de p\u00e1ginas HTML analisadas n\u00e3o est\u00e1 dispon\u00edvel\n neste registro.\n\n\n\n\nOportunidades para revisar\n\n  Descri\u00e7\u00e3o da oferta\n  N\u00e3o foi encontrada uma meta descri\u00e7\u00e3o nesta p\u00e1gina.\n  P\u00e1gina: Page 000\n  Pe\u00e7a \u00e0 equipe do site para revisar uma descri\u00e7\u00e3o clara da oferta. Buscadores podem escolher outro\n  texto para exibir.\n\n\n\n\nConfirme cada observa\u00e7\u00e3o antes de fazer altera\u00e7\u00f5es ou compartilhar esta revis\u00e3o.\n\n\nSynthetic PDF Review    Example Studio    review@example.test    +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "f8b50aa96e406b2a2838075bab6aead954e2caef60c8e9fc97e97fc2fd0cf670"
+      ],
+      "pdfSha256": "79bb96db34920d4a9088c3e86e0e6e79dd1cd33430bf4264a754dd8db55352b2"
+    },
+    {
+      "id": "mobile-en",
+      "pages": 2,
+      "geometry": "Pages:           2\nPage size:       306 x 793.92 pts",
+      "beforeSha256": "c2a8d5d7612b1ba2c99dd9cd694fa51cabc56703d7b1b16bd03b1c6a11b696e7",
+      "htmlSha256": "cdffc75ca0e5eaf8685f6942a3b034cd1e10ed20917f5f9ff959d03d11cf27a4",
+      "text": "WEBSITE REVIEW                  Website checked \u00b7 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n\n 1 captured response      3 topics to review\n\n\n\n  Tested page \u00b7 Mobile lab page\n  No usable scores were available. Ask your website\n  provider to repeat the mobile measurement before\n  drawing conclusions about speed.\n\n\nKey observations\n\n  1 page to review\n  Preferred page versions\n  Example page: Page 000\n  These settings can be intentional. The crawl does\n  not establish whether Google lists a page.\n  Next step: Tell your website provider which offers\n  should be found in search. Have them check these\n  settings before changing anything.\n\n\n  1 page to review\n  Missing search descriptions\n  Example page: Page 000\n  Clear wording can help people distinguish your\n  offers. Search engines may choose different text.\n  Next step: Review whether these pages belong\n  with the current offers before editing descriptions.\n  Confirm their purpose with the owner; retain\n  intentional archives.\n\n\n\n\nSynthetic PDF Review \u00b7 Example Studio\nreview@example.test \u00b7 +31 20 123 4567\n\ffixture.example\n\n\n  1 page to review\n  Missing main headings\n  Example page: Page 000\n  Headings help visitors and screen-reader users\n  understand the offer. These observations do not\n  prove a ranking problem.\n  Next step: Ask your editor to check the affected\n  pages. Make the main offer clear and arrange\n  headings in a useful reading order.\n\n\n\n\nLet\u2019s get in touch\nContact us using the reply details below to discuss this\narchived review.\n\n\nSynthetic PDF Review \u00b7 Example Studio\nreview@example.test \u00b7 +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   2  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "8dc6cd4abd1cd7c66e84db9e231e3fd53d6853e08da3a4222f4139114ff09d34",
+        "1b3b26fc24716357776f83ed763c4c5ab927c5f5ba6e2d1285e4bad941101ad3"
+      ],
+      "pdfSha256": "66b2d4c6f2505ff809de538dbd71f68447e7eb3d8483aa2c2f5f224ff4acba73"
+    },
+    {
+      "id": "mobile-de",
+      "pages": 2,
+      "geometry": "Pages:           2\nPage size:       306 x 793.92 pts",
+      "beforeSha256": "5d936084aebeef81a5c0377b91afed2d3212c8f45660a8fbde8add59256ae7ac",
+      "htmlSha256": "44c7a2736042d853a69619db9f78645ea80be5a55977d2e0c33ee1d13cdde1ff",
+      "text": "WEBSITE-PR\u00dcFUNG                 Website gepr\u00fcft \u00b7 29.10.2026\n\n\nfixture.example\nWas Aufmerksamkeit verdient\n\n\n\n 1 erfasste Antwort     3 Themen zum Pr\u00fcfen\n\n\n\n  Gepr\u00fcfte Seite \u00b7 Mobile Labormessung\n  Es lagen keine nutzbaren Werte vor. Lassen Sie\n  die mobile Messung wiederholen, bevor Sie\n  R\u00fcckschl\u00fcsse zur Geschwindigkeit ziehen.\n\n\nWichtige Beobachtungen\n\n  1 Seite pr\u00fcfen\n  Bevorzugte Seitenversionen\n  Beispielseite: Page 000\n  Diese Einstellungen k\u00f6nnen beabsichtigt sein. Die\n  Pr\u00fcfung zeigt nicht, ob Google eine Seite listet.\n  N\u00e4chster Schritt: Teilen Sie Ihrer Website-\n  Betreuung mit, welche Angebote in der Suche\n  erscheinen sollen. Lassen Sie die Einstellungen vor\n  \u00c4nderungen pr\u00fcfen.\n\n\n  1 Seite pr\u00fcfen\n  Fehlende Suchbeschreibungen\n  Beispielseite: Page 000\n  Klare Texte helfen Menschen, Angebote zu\n  unterscheiden. Suchmaschinen k\u00f6nnen andere\n  Texte anzeigen.\n  N\u00e4chster Schritt: Pr\u00fcfen Sie vor Text\u00e4nderungen,\n  ob diese Seiten zum aktuellen Angebot geh\u00f6ren.\n  Kl\u00e4ren Sie ihren Zweck mit dem Betrieb; behalten\n  Sie beabsichtigte Archive.\n\n\n\n\nSynthetic PDF Review \u00b7 Example Studio\nreview@example.test \u00b7 +31 20 123 4567\n\ffixture.example\n\n\n  1 Seite pr\u00fcfen\n  Fehlende Haupt\u00fcberschriften\n  Beispielseite: Page 000\n  \u00dcberschriften helfen beim Verstehen des Angebots\n  und bei der Nutzung mit Screenreader. Diese\n  Beobachtungen belegen kein Rankingproblem.\n  N\u00e4chster Schritt: Lassen Sie die betroffenen\n  Seiten redaktionell pr\u00fcfen. Benennen Sie das\n  Hauptangebot klar und ordnen Sie \u00dcberschriften\n  sinnvoll.\n\n\n\n\nLassen Sie uns sprechen\nKontaktieren Sie uns \u00fcber die unten stehenden Angaben, um\ndiese archivierte Pr\u00fcfung zu besprechen.\n\n\nSynthetic PDF Review \u00b7 Example Studio\nreview@example.test \u00b7 +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   2  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "78fbcc45e6d4d31b1037d224e22308fed0cb4a25cf321e85dfc451798c4eef23",
+        "302036067937194232703d799a3943ae8639529dbce4dfb35e83724b846040ec"
+      ],
+      "pdfSha256": "b1b1b3ce6c519457feb8fd334fc4571331ecc14632a058df17409fcbcdb9430e"
+    },
+    {
+      "id": "mobile-pt-BR",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       306 x 793.92 pts",
+      "beforeSha256": "24f4ca9ad499790dbc41f81ade4822c80f694860e57811b8ba6d6743070fa26b",
+      "htmlSha256": "a7489a6e1c93d88e8eac3e4734a16b0330a4cdf99cccf94a7cc501447f98c1e8",
+      "text": "REVIS\u00c3O DO SITE\n\nfixture.example\nObserva\u00e7\u00e3o arquivada em 29 de outubro de 2026\n\n\n\n\n Esta revis\u00e3o cobre apenas as p\u00e1ginas e\n verifica\u00e7\u00f5es registradas na coleta. N\u00e3o confirma o\n estado atual do site, tr\u00e1fego, posi\u00e7\u00f5es ou reservas.\n A contagem de p\u00e1ginas HTML analisadas n\u00e3o est\u00e1\n dispon\u00edvel neste registro.\n\n\nOportunidades para revisar\n\n  Descri\u00e7\u00e3o da oferta\n  N\u00e3o foi encontrada uma meta descri\u00e7\u00e3o nesta\n  p\u00e1gina.\n  P\u00e1gina: Page 000\n  Pe\u00e7a \u00e0 equipe do site para revisar uma descri\u00e7\u00e3o\n  clara da oferta. Buscadores podem escolher outro\n  texto para exibir.\n\n\n\n\nConfirme cada observa\u00e7\u00e3o antes de fazer altera\u00e7\u00f5es ou\ncompartilhar esta revis\u00e3o.\n\n\nSynthetic PDF Review Example Studio\nreview@example.test +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "bbe248c829fcd27df9a51f0b3135fd59c6f23b803cc0fd7db55be5c4743d23c3"
+      ],
+      "pdfSha256": "7fab151f3ebdff6935fd38eaf6ffce648e80e6248aa6cafc1da5dfe0505fa9b5"
+    },
+    {
+      "id": "a4-one-topic",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "beforeSha256": "37040ea10811fd424fe9de75a30c3909a1db3613bbb153febf18957765d28eeb",
+      "htmlSha256": "457d9b901445a3acc75724e24e46c744b145ff05234c3fd0685b73c1b5a3c376",
+      "text": "WEBSITE REVIEW                                                                            Website checked \u00b7 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n\n  1 captured response        1 topic to review\n\n\n  Tested page \u00b7 Mobile lab page\n  No usable scores were available. Ask your website provider to repeat the mobile measurement before drawing\n  conclusions about speed.\n\n\nKey observations\n\n  1 page to review\n  Missing search descriptions\n  Example page: Page 000\n  Clear wording can help people distinguish your offers. Search engines may choose different text.\n  Next step: Review whether these pages belong with the current offers before editing descriptions. Confirm their\n  purpose with the owner; retain intentional archives.\n\n\n\n\nLet\u2019s get in touch\nContact us using the reply details below to discuss this archived review.\n\nSynthetic PDF Review \u00b7 Example Studio         review@example.test \u00b7 +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "9b703abde095d6f73cbc2c91b4961e6160963924233a612bbc414f04902c2cfb"
+      ],
+      "pdfSha256": "ddbcce896b67b78171d3ea2ff9f4db30fd3ff10832a6f5ba1ae9db559e01d661"
+    },
+    {
+      "id": "operator-en",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "beforeSha256": "311d31dc1b4c0d7a4a0e900d65c8bdcb80877d3af39283d800e1988f8c9997d2",
+      "htmlSha256": "a5d1b6fb903016067c6f2acd055118ccfddd08cfb1d6d3ecb1754540f27c0131",
+      "text": "Internal technical SEO report\nWebsite: fixture.example \u00b7 Captured: 2026-10-29T00:00:00.000Z\n\nCrawl coverage\n\n  Crawl complete\n  1 captured responses (1 successful responses; completed HTML analyses: UNKNOWN) from 1 discovered URLs \u00b7 0 failed \u00b7 0\n  unattempted \u00b7 page limit 750.\n  Crawl finished; review individual check coverage separately.\n  PageSpeed Insights mobile: unavailable\n\nSecurity check coverage\n Security headers \u00b7 complete \u00b7 1/1 checked \u00b7 0 findings                    Mixed content \u00b7 complete \u00b7 1/1 checked \u00b7 0 findings\n Sensitive forms \u00b7 complete \u00b7 1/1 checked \u00b7 0 findings                     Cookie attributes \u00b7 complete \u00b7 1/1 checked \u00b7 0 findings\n security.txt \u00b7 complete \u00b7 0/0 checked \u00b7 0 findings\n\n\nAll checks \u00b7 3 evidence occurrences across 3 check fields\n\n informational \u00b7 Canonical         1 captured URLs \u00b7 0 image/assets         informational \u00b7 missing h1       1 captured URLs \u00b7 0 image/assets\n link missing                                                               metadata\n metadata                                                                   missing_h1\n missing_canonical                                                          Example: https://fixture.example/page-000\n Example: https://fixture.example/page-000\n\n informational \u00b7 Meta              1 captured URLs \u00b7 0 image/assets\n description missing\n metadata\n missing_meta_description\n Example: https://fixture.example/page-000\n\nTechnology: No seed-page technology signal; CMS unknown \u00b7 Limitations: none \u00b7 Public-page sample; findings require human review.\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "f179633c67186048a627d4bbecd068cee9ad6fbe647786e76ed6f20f65e8255f"
+      ],
+      "pdfSha256": "311d31dc1b4c0d7a4a0e900d65c8bdcb80877d3af39283d800e1988f8c9997d2"
+    }
+  ],
+  "schema": "spora-pdf-golden-v1",
+  "environment": {
+    "node": "v24.18.0",
+    "icu": "78.3",
+    "playwright": "1.64.1",
+    "platform": "linux",
+    "architecture": "x64",
+    "font": {
+      "family": "Arial",
+      "path": "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+      "sha256": "35c0f3559d8db569e36c31095b8a60d441643d95f59139de40e23fada819b833"
+    },
+    "poppler": "pdfinfo version 22.12.0",
+    "chromium": "156.0.8078.4"
+  },
+  "sourceFingerprint": "e4c49967e56dce234f46d01088d19dfe6afc62a9ec2f855b352408d9e692a55d",
+  "previousSourceFingerprint": "f40ef8a417949dce8b5b65bfc445ca82f56fc2c3e5a5234004490f46349d32ce",
+  "reviewProfile": "customer-review-v3-edge-aligned-footer",
+  "reviewedSourceFiles": {
+    "src/reports/customer-pt.ts": "30072f7167c4fb2df5aee993405ea6ff5b034221547a1758718f8f1e8a5dd15a",
+    "src/reports/customer.ts": "b33ce943e3990cf2086334d74583debf4814ded4249c67e6c1f886803c237c4d",
+    "src/reports/html.ts": "f54950e4478761f2c05e7fbdf8f1ce4563f58c96a36dd1028e806b1d48c90670",
+    "src/reports/index.ts": "3e69f4825ca89c283930c43220f600c88abd4ba3b47cf26aaff19aeade8e39c6",
+    "src/reports/mobile.ts": "ee6e76f16c25bc0d791ed7848d192cc33ee679812f4b32d6a2ff01cbac4277e9",
+    "src/reports/operation-deadline.ts": "243c662c95c68df972c6f34120f84f9e85a51f70e6d207744c00427b4c266e73",
+    "src/reports/pdf-playwright.ts": "477238dc688a9eb033e1f3c26b7aa5db6dc2882f90b34d4005b363d2c22c4418",
+    "src/reports/publication.ts": "5b524035c876a2d616c40ea7e77706baa6739f545bfca8661ab050e062d5c454",
+    "src/reports/qualification.ts": "3097b9777218077b045ebac6d6ba8369988c3028f8755fad8296601bdf463650",
+    "src/reports/references.ts": "93f69f3146dcfd952a25c62df47c8a5704c3f23ba6609a21638a19a7e9f92c0c",
+    "src/reports/report-contact.ts": "aa00d02112d59d1f14f96cab10efdd59a01f26d8e9b848a19ea6ad87689b1a27",
+    "src/reports/review.ts": "0c9f0ef1d2a9c4665102f3fd608ee4b326662feb255201aad9db4070fe9b8366",
+    "src/reports/scope.ts": "c467ff0756a521f3ac2d6057573b2b10b052cffcd619f0b2b3d12b1dc53f026d",
+    "src/reports/summary.ts": "8777dce4b0a453d1dd21936a6261bb64bc9664d38435aec9bb7db212bff8745c",
+    "src/reports/whatsapp-draft.ts": "48424f70eab16fdb79d79f6baa211e98b558695cbf94520cb6ccb95dac248d80"
+  }
+}

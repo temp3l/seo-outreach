@@ -3,7 +3,7 @@ import { isAbsolute } from 'node:path';
 import type { AuditResult } from '@spora/webcrawl';
 import { auditResultSha256 } from './qualification.js';
 
-export const CUSTOMER_REVIEW_PROFILE = 'customer-review-v2-clean-layout';
+export const CUSTOMER_REVIEW_PROFILE = 'customer-review-v3-edge-aligned-footer';
 
 /** Private review state; clean PDF content never establishes release approval. */
 export function createCustomerReviewManifest(result: AuditResult, locale: 'en' | 'de', artifacts: readonly { role: 'a4' | 'mobile'; path: string; content: Uint8Array }[]) {

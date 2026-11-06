@@ -32,7 +32,7 @@ export type CustomerReviewTemplate = Readonly<{
     indexingIntended: null;
   }>[];
 }>;
-export type CustomerReviewReceipt = Readonly<{ sha256: string; approvedFindings: 6 }>;
+export type CustomerReviewReceipt = Readonly<{ sha256: string; approvedFindings: number }>;
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): v is Obj => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -43,7 +43,7 @@ function validateContext(context: CustomerReviewContext): void {
   if (!obj(context) || Object.keys(context).length !== 4 ||
       typeof context.company !== 'string' || context.company.length > 253 ||
       !SHA256.test(context.analysisSha256) || !SHA256.test(context.reportPdfSha256) ||
-      !Array.isArray(context.findings) || context.findings.length !== 6) invalid();
+      !Array.isArray(context.findings) || (context.findings.length < 1 || context.findings.length > 6)) invalid();
   let companyUrl: URL;
   try { companyUrl = new URL(`https://${context.company}/`); } catch { invalid(); }
   if (companyUrl.hostname !== context.company.toLowerCase() || companyUrl.host !== companyUrl.hostname ||
@@ -66,7 +66,7 @@ function validateContext(context: CustomerReviewContext): void {
   }
 }
 
-/** Creates an editable, non-authoritative review template for exactly six findings. */
+/** Creates an editable, non-authoritative review template for one to six findings. */
 export function customerReviewTemplate(context: CustomerReviewContext): CustomerReviewTemplate {
   try { validateContext(context); } catch { return invalid(); }
   return Object.freeze({
@@ -87,7 +87,7 @@ export function customerReviewTemplate(context: CustomerReviewContext): Customer
 
 /**
  * Validates an operator-completed review against its exact analysis/PDF and
- * six-finding context. The receipt contains no reviewer identity and carries no
+ * selected-finding context. The receipt contains no reviewer identity and carries no
  * publication or outreach authority by itself.
  */
 export function validateCustomerReview(bytes: Uint8Array, context: CustomerReviewContext): CustomerReviewReceipt {
@@ -98,7 +98,7 @@ export function validateCustomerReview(bytes: Uint8Array, context: CustomerRevie
   if (!obj(value) || Object.keys(value).length !== 5 ||
       value.schema !== SCHEMA || value.coverageReviewed !== true ||
       !SHA256.test(String(value.analysisSha256)) || !SHA256.test(String(value.reportPdfSha256)) ||
-      !Array.isArray(value.findings) || value.findings.length !== 6) invalid();
+      !Array.isArray(value.findings) || value.findings.length !== context.findings.length) invalid();
   if (value.analysisSha256 !== context.analysisSha256 || value.reportPdfSha256 !== context.reportPdfSha256) mismatch();
 
   const expected = new Map(context.findings.map(f => [f.id, f]));
@@ -117,5 +117,5 @@ export function validateCustomerReview(bytes: Uint8Array, context: CustomerRevie
     seen.add(item.issueId);
   }
   if (seen.size !== expected.size) mismatch();
-  return Object.freeze({ sha256: createHash('sha256').update(bytes).digest('hex'), approvedFindings: 6 });
+  return Object.freeze({ sha256: createHash('sha256').update(bytes).digest('hex'), approvedFindings: context.findings.length });
 }

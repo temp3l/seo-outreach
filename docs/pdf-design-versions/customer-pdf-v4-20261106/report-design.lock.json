@@ -1,0 +1,258 @@
+{
+  "schema": "spora-pdf-design-lock-v1",
+  "design": "customer-pdf-v4-20261106",
+  "previousDesign": "customer-pdf-v3-20261106",
+  "authority": "Explicit user request: pages label and compact single-row summary badges, 6 November 2026",
+  "files": [
+    {
+      "path": "src/reports/customer.ts",
+      "kind": "presentation",
+      "sha256": "7cc03b3d98fa5b3037f810478bfd0125bf12de3457f180b3bcb29f350f278594"
+    },
+    {
+      "path": "src/reports/customer-pt.ts",
+      "kind": "presentation",
+      "sha256": "552cb4da4a1a76b310107fb78e66a49f3be8c90c0d4266d72e479cdc53035e7b"
+    },
+    {
+      "path": "src/reports/mobile.ts",
+      "kind": "file",
+      "sha256": "349d234e7d847edc61891b3febb832f9bf1dd58c3eb436acaceaee77d7e13196"
+    },
+    {
+      "path": "src/reports/summary.ts",
+      "kind": "file",
+      "sha256": "8777dce4b0a453d1dd21936a6261bb64bc9664d38435aec9bb7db212bff8745c"
+    },
+    {
+      "path": "src/reports/pdf-playwright.ts",
+      "kind": "file",
+      "sha256": "63b69a90e319ccded6d12824a650f525ec4ee971012d511ca646e207ebaa9512"
+    },
+    {
+      "path": "src/reports/design-contract.ts",
+      "kind": "file",
+      "sha256": "7f658c1eca9664b32467b64bac5fd059243839ed831f1a9c15c1d9d4fc1d52f8"
+    },
+    {
+      "path": "scripts/check-report-visuals.mjs",
+      "kind": "file",
+      "sha256": "4ff6d8c9398932eccfd0812ca9c70f994af1a732cc2c98796584223015eebaf8"
+    },
+    {
+      "path": "tests/report-design-contract.test.mjs",
+      "kind": "file",
+      "sha256": "ea1bccb1599fdbeb48511fa3cb0843b26039559db1dfee7641567c7c1a006ed7"
+    },
+    {
+      "path": "tests/report-design-visual.test.mjs",
+      "kind": "file",
+      "sha256": "0a203fb60b56d450228ee651fa2b4ec60142a8fa6ca5248d4f34c5dbcd831674"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-de-1.png",
+      "kind": "file",
+      "sha256": "41f0d318d4e28687e7a9f64ab45864c770ce29be9068527882bdaf049bdcc67e"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-de.html",
+      "kind": "file",
+      "sha256": "d75a5d3b7bae928269bbede80581585facb4bb98ff8970748b9fe303d870f8b4"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-de.pdf",
+      "kind": "file",
+      "sha256": "c03c5ad80c125a821f657b9bba19b2b6dd5685c557737aedeceb80f1daba9e44"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-en-1.png",
+      "kind": "file",
+      "sha256": "864a3743173e0db4919582b311a6b36fe72c357d9ca8774f98fe96156ec1cdfe"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-en.html",
+      "kind": "file",
+      "sha256": "a92ab5a2058d738684b0a87df193caa58aa14c4b93a11a22f3489e952622441d"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-en.pdf",
+      "kind": "file",
+      "sha256": "bd2d925f1144a1485468ea23c201e90d20d6023f7918035c1f8bb4bd5a4835b7"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-one-topic-1.png",
+      "kind": "file",
+      "sha256": "b6d7a383890a82c8c2fb6e5dc25ffc8ca5c034a57d256c66fc6f96d23236c6bc"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-one-topic.html",
+      "kind": "file",
+      "sha256": "b92cbd95224ab302d3b459186e36d58c42acb1b8cfd60e817ed711c39dbcd2a7"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-one-topic.pdf",
+      "kind": "file",
+      "sha256": "4d61f3f1b435f05b1a185c83fc7c58f1ecdd4264d52306e82484f86a42087e5b"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-pt-BR-1.png",
+      "kind": "file",
+      "sha256": "054da23e6032297d6c65cf4518ad8acbd57f105f100d7c5b0a2e43d31d6bed76"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-pt-BR.html",
+      "kind": "file",
+      "sha256": "9ec47efb3d943fc70a00826f303dabf9f355b8d7cb04d12e153c6483ec5d8b2c"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-pt-BR.pdf",
+      "kind": "file",
+      "sha256": "236b21f2f0fc32a008309fc4c6cf75f3506948e84dfd544b8f77ee1962dcf2b2"
+    },
+    {
+      "path": "tests/fixtures/report-golden/fixture-audit.json",
+      "kind": "file",
+      "sha256": "634bdc0b9c0382ff7ce56f02c4d6cdf4d97dca24b7b0b71294c0e748a3a588f8"
+    },
+    {
+      "path": "tests/fixtures/report-golden/fixture-issuer.json",
+      "kind": "file",
+      "sha256": "e48cfe44d24611091cab92e66ddd3d5ac136f1a5a2634bcc092553920a692be6"
+    },
+    {
+      "path": "tests/fixtures/report-golden/manifest.json",
+      "kind": "file",
+      "sha256": "6eefd06a8815ea884d1a18066a52f0401926484bc4e838336470ad548b9405d9"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-de-1.png",
+      "kind": "file",
+      "sha256": "a10e68aa3cf23170d32920bcdcdbade32c8af5dd878915e8ed9b2d0264d41c0e"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-de-2.png",
+      "kind": "file",
+      "sha256": "302036067937194232703d799a3943ae8639529dbce4dfb35e83724b846040ec"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-de.html",
+      "kind": "file",
+      "sha256": "136d9cedfb3d91de214cc3d29bd6e109d4c9fcdaf24fb7f6c8114d0cd0098582"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-de.pdf",
+      "kind": "file",
+      "sha256": "2ba85c64536a161719964223eec372108264c58680a76f0a3a6415d4d40a7604"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-en-1.png",
+      "kind": "file",
+      "sha256": "bc049ecc26bc01a88e62b33092b15f890358c95c69eb3c85ba4f7749fa35caa4"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-en-2.png",
+      "kind": "file",
+      "sha256": "1b3b26fc24716357776f83ed763c4c5ab927c5f5ba6e2d1285e4bad941101ad3"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-en.html",
+      "kind": "file",
+      "sha256": "f991c687f1bd950c15433b336d57ac9ff64d7b086370921f9e168f0fbc98fa65"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-en.pdf",
+      "kind": "file",
+      "sha256": "5e9c4ec5d5c1eb087cce1c017449770541a73f668509e0e0e0e7076b2b80fda7"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-pt-BR-1.png",
+      "kind": "file",
+      "sha256": "52be263eecc1e17e59d55bf57e74e3b4370d90efa1503fd98e399a2c78231f47"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-pt-BR.html",
+      "kind": "file",
+      "sha256": "8af5abaf1f8199085945908c8bb92db8ef90290d43f362d98cdde05e47230d9a"
+    },
+    {
+      "path": "tests/fixtures/report-golden/mobile-pt-BR.pdf",
+      "kind": "file",
+      "sha256": "0cbecece9dc465db51be5fef8bf288900f5c99d3a63db3f4bff78ce408715348"
+    },
+    {
+      "path": "tests/fixtures/report-golden/operator-en-1.png",
+      "kind": "file",
+      "sha256": "f179633c67186048a627d4bbecd068cee9ad6fbe647786e76ed6f20f65e8255f"
+    },
+    {
+      "path": "tests/fixtures/report-golden/operator-en.html",
+      "kind": "file",
+      "sha256": "a5d1b6fb903016067c6f2acd055118ccfddd08cfb1d6d3ecb1754540f27c0131"
+    },
+    {
+      "path": "tests/fixtures/report-golden/operator-en.pdf",
+      "kind": "file",
+      "sha256": "311d31dc1b4c0d7a4a0e900d65c8bdcb80877d3af39283d800e1988f8c9997d2"
+    },
+    {
+      "path": "tests/fixtures/report-golden/renderer-body-sha256.json",
+      "kind": "file",
+      "sha256": "bd694b1c9d502083e21c0769734a52c413a72dd8f93f539d3e354dfdc3d0c3a7"
+    },
+    {
+      "path": "scripts/check-report-design.mjs",
+      "kind": "file",
+      "sha256": "31043ab0acc3696d1920eb5f5f7b60b8428a63b62398b7e1f6c1ab267df73e9c"
+    },
+    {
+      "path": "src/reports/issue-counts.ts",
+      "kind": "file",
+      "sha256": "7f8f61fb71b7787104954e993f69c9fcf21ad02020a86e9e8180f319d9c00c78"
+    },
+    {
+      "path": "tests/customer-issue-counts.test.mjs",
+      "kind": "file",
+      "sha256": "4c65f18e84163cda75cae0cd9807a42496b2242e9001248b8a6edb839315ab98"
+    },
+    {
+      "path": "tests/webcrawl-customer-pdf.test.mjs",
+      "kind": "file",
+      "sha256": "fda48ae6f2969b74232065a6aa163da336a6451c5a37463b5c46a9dc0226b048"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-two-topics.html",
+      "kind": "file",
+      "sha256": "086e3b31f81415dd118806033053b19c59760066192ec47c81addb416703d5ad"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-two-topics.pdf",
+      "kind": "file",
+      "sha256": "394ced9309a3ddd05c7f9fa6dcdd89b87ff542ffb05e9a95269c2ce71994f505"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-two-topics-1.png",
+      "kind": "file",
+      "sha256": "c99d228d1b09d491c9b8ab133860a6c215125ac334e6b5eb64f2a51e178978c1"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-six-topics.html",
+      "kind": "file",
+      "sha256": "a03b109d1f60f62e8894165bb62d8c4cc1a58dc91c6910ebef1d6e3b889792ee"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-six-topics.pdf",
+      "kind": "file",
+      "sha256": "cb31814995b372df71891386a02f606031e37450476ff38a98b62f66f5b70d9c"
+    },
+    {
+      "path": "tests/fixtures/report-golden/a4-six-topics-1.png",
+      "kind": "file",
+      "sha256": "6c7bada31d7193cf009acd895056154d83b2f18c4c72c7dda69fd1d08639c41c"
+    },
+    {
+      "path": "tests/webcrawl-mobile-report.test.mjs",
+      "kind": "file",
+      "sha256": "93a47b2b5e34127f9ecf2a44ecdde12c23f16c5b3446a53d7e9477403371a2aa"
+    }
+  ]
+}

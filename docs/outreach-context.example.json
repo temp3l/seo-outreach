@@ -1,0 +1,16 @@
+{
+  "booking.example": {
+    "buyerRole": "owner",
+    "businessType": "booking_business",
+    "businessName": "Example School",
+    "services": ["Lessons", "Equipment rental"]
+  },
+  "shop.example": {
+    "buyerRole": "ecommerce_manager",
+    "businessType": "ecommerce"
+  },
+  "service.example": {
+    "buyerRole": "unknown",
+    "businessType": "local_service"
+  }
+}

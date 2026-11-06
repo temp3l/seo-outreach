@@ -7,6 +7,8 @@ export { corroborateArchive } from './corroboration.js';
 export type { Corroboration } from './corroboration.js';
 export { qualifiedDigest, validateSelection } from './decision.js';
 export type { Decision, Finding, Locale } from './decision.js';
+export { BUYER_ROLES, BUSINESS_TYPES } from './outreach.js';
+export type { OutreachContext } from './outreach.js';
 export { auditReviewFindings } from './decision.js';
 
 export { analyze, batch, render } from './pipeline.js';

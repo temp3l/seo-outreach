@@ -1,0 +1,161 @@
+{
+  "schemaVersion": "1",
+  "startedAt": "2026-10-29T00:00:00.000Z",
+  "completedAt": "2026-10-29T00:00:00.000Z",
+  "target": "https://fixture.example/page-000",
+  "crawlSettings": {
+    "policy": {
+      "allowedHosts": [
+        "fixture.example"
+      ],
+      "maxPages": 750,
+      "maxRequests": 1800,
+      "maxRuntimeMs": 1800000,
+      "maxResponseBytes": 20000000,
+      "maxTotalResponseBytes": 1000000000,
+      "minRequestIntervalMs": 1000,
+      "maxConcurrency": 2
+    },
+    "userAgent": "webcrawl-fixture",
+    "renderBrowser": false,
+    "retainHtml": false,
+    "enrichments": []
+  },
+  "crawl": {
+    "discovered": 1,
+    "attempted": 1,
+    "captured": 1,
+    "failed": 0,
+    "skipped": 0,
+    "unattempted": 0,
+    "limitations": []
+  },
+  "coverage": {
+    "urls": [
+      {
+        "url": "https://fixture.example/page-000",
+        "finalUrl": "https://fixture.example/page-000",
+        "outcome": "captured",
+        "statusCode": 200
+      }
+    ],
+    "checks": {
+      "internalLinks": {
+        "scope": "same_host",
+        "outOfScope": 0,
+        "status": "complete",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "imageSizes": {
+        "scope": "same_host",
+        "outOfScope": 0,
+        "status": "complete",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "securityHeaders": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "mixedContent": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "sensitiveForms": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "cookieAttributes": {
+        "status": "complete",
+        "discovered": 1,
+        "checked": 1,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      },
+      "securityTxt": {
+        "status": "complete",
+        "discovered": 0,
+        "checked": 0,
+        "findings": 0,
+        "failed": 0,
+        "skipped": 0,
+        "unattempted": 0
+      }
+    },
+    "findings": {
+      "records": 0,
+      "checkCodes": 0,
+      "affectedPages": 0,
+      "evidenceOccurrences": 0,
+      "byCheck": []
+    }
+  },
+  "capabilities": {
+    "http": "complete",
+    "technicalSeo": "complete"
+  },
+  "findings": [
+    {
+      "code": "missing_meta_description",
+      "category": "metadata",
+      "observed": "missing_meta_description",
+      "evidence": [
+        {
+          "pageUrl": "https://fixture.example/page-000",
+          "source": "http",
+          "observedAt": "2026-10-29T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "code": "missing_canonical",
+      "category": "metadata",
+      "observed": "missing_canonical",
+      "evidence": [
+        {
+          "pageUrl": "https://fixture.example/page-000",
+          "source": "http",
+          "observedAt": "2026-10-29T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "code": "missing_h1",
+      "category": "metadata",
+      "observed": "missing_h1",
+      "evidence": [
+        {
+          "pageUrl": "https://fixture.example/page-000",
+          "source": "http",
+          "observedAt": "2026-10-29T00:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}

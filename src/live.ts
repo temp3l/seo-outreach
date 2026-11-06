@@ -3,14 +3,14 @@ import { openLocalState, type CacheIdentity, type Caps, type Cost, type Reservat
 import { estimateRequest, generateSalesOutput, validateRecordedOutput, type ProviderConfig, type ProviderLocale, type ProviderResult, type SalesOutput } from './provider.js';
 import type { Digest } from './digest.js';
 
-export const LIVE_PROMPT_VERSION = 'seo-outreach-sales-prompt-v3';
+export const LIVE_PROMPT_VERSION = 'seo-outreach-sales-prompt-v6';
 export const LIVE_SCHEMA_VERSION = 'seo-outreach-sales-output-v1';
 const MAX_OVERALL_DURATION_MS=300_000;
 const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 /** Must be used by the caller when constructing CacheIdentity.settingsFingerprint. */
 export function liveSettingsFingerprint(config: ProviderConfig): string {
-  return hash({ endpoint:config.endpoint,model:config.model,reasoningEffort:'medium',timeoutMs:config.timeoutMs,maxInputTokens:config.maxInputTokens,maxOutputTokens:config.maxOutputTokens,inputUsdPerMillionTokens:config.inputUsdPerMillionTokens,outputUsdPerMillionTokens:config.outputUsdPerMillionTokens,companyRequestCap:config.companyRequestCap,companyTokenCap:config.companyTokenCap,companyUsdCap:config.companyUsdCap,batchRequestCap:config.batchRequestCap,batchTokenCap:config.batchTokenCap,batchUsdCap:config.batchUsdCap });
+  return hash({ endpoint:config.endpoint,model:config.model,reasoningEffort:'medium',timeoutMs:config.timeoutMs,maxInputTokens:config.maxInputTokens,maxOutputTokens:config.maxOutputTokens,inputUsdPerMillionTokens:config.inputUsdPerMillionTokens,outputUsdPerMillionTokens:config.outputUsdPerMillionTokens,companyRequestCap:config.companyRequestCap,companyTokenCap:config.companyTokenCap,companyUsdCap:config.companyUsdCap,batchRequestCap:config.batchRequestCap,batchTokenCap:config.batchTokenCap,batchUsdCap:config.batchUsdCap,salesContext:config.salesContext??null });
 }
 
 export type DispatchAuthorizedOptions = {

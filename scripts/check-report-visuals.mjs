@@ -23,10 +23,26 @@ const {chromium}=await import('playwright'),browser=await chromium.launch({headl
 const results=[];let failed=false;
 await withPlaywrightPdfSession(async renderer=>{
  for(const c of manifest.results){
+  // Scope wording is editorial content. Pin it to the reviewed fixture while testing
+  // the current template, CSS, pagination and renderer. Never rewrite references.
+  const referenceHtml=await readFile(join(gold,c.id+'.html'),'utf8');
+  const frozenScope=referenceHtml.match(/<p class="scope">[\s\S]*?<\/p>/u)?.[0];
+  const fixtureHtml=value=>{
+   if(!frozenScope)return value;
+   if(/<p class="scope">[\s\S]*?<\/p>/u.test(value))return value.replace(/<p class="scope">[\s\S]*?<\/p>/u,frozenScope);
+   if(!value.includes('</header>'))throw Error('report_visual_header_structure_changed');
+   return value.replace('</header>','</header>'+frozenScope);
+  };
   const data=structuredClone(audit);if(c.id==='a4-one-topic')data.findings=data.findings.slice(0,1);
+  if(c.id==='a4-two-topics')data.findings=data.findings.slice(0,2);
+  if(c.id==='a4-six-topics'){
+   const evidence={pageUrl:data.target,source:'http',observedAt:data.startedAt};
+   data.findings=['missing_meta_description','missing_h1','images_missing_alt','images_missing_dimensions','missing_canonical'].map(code=>({code,category:'content',observed:code,evidence:[evidence]}));
+   data.findings.push({code:'pagespeed_category_score',category:'performance',observed:'performance score: 39/100.',evidence:[{...evidence,source:'pagespeed',value:39}]});
+  }
   const locale=c.id.includes('pt-BR')?'pt-BR':c.id.endsWith('-de')?'de':'en';let html,pdf;
-  if(c.id.startsWith('mobile'))pdf=await renderMobileCustomerPdf(data,async value=>{html=value;return renderer(value);},issuer,locale,'HOLD');
-  else{html=c.id.startsWith('operator')?renderOperatorStatusHtml(data,locale):renderCustomerSummaryHtml(data,locale,{issuer});pdf=await renderer(html);}
+  if(c.id.startsWith('mobile'))pdf=await renderMobileCustomerPdf(data,async value=>{html=fixtureHtml(value);return renderer(html);},issuer,locale,'HOLD');
+  else{html=c.id.startsWith('operator')?renderOperatorStatusHtml(data,locale):renderCustomerSummaryHtml(data,locale,{issuer});html=fixtureHtml(html);pdf=await renderer(html);}
   const stem=join(out,c.id);await writeFile(stem+'.html',html);await writeFile(stem+'.pdf',pdf);execFileSync('pdftoppm',['-r',String(manifest.dpi),'-png',stem+'.pdf',stem],{timeout:30_000});
   const text=execFileSync('pdftotext',['-layout',stem+'.pdf','-'],{encoding:'utf8'});const info=execFileSync('pdfinfo',[stem+'.pdf'],{encoding:'utf8'});const urls=execFileSync('pdfinfo',['-url',stem+'.pdf'],{encoding:'utf8'}).split('\n').filter(l=>/^\s*\d/.test(l)).join('\n');
   const pages=(await readdir(out)).filter(f=>f.startsWith(c.id+'-')&&f.endsWith('.png')).sort();const png=await Promise.all(pages.map(p=>readFile(join(out,p)).then(sha)));
@@ -34,7 +50,19 @@ await withPlaywrightPdfSession(async renderer=>{
   const r={id:c.id,fonts:fontTable(stem+'.pdf')===fontTable(join(gold,c.id+'.pdf')),html:sha(Buffer.from(html))===c.htmlSha256,text:text===c.text,links:urls===c.urls,geometry:info.split('\n').filter(l=>/^(Pages:|Page size:)/.test(l)).join('\n')===c.geometry,pages:pages.length===c.pages,visual:png.length===c.pngSha256.length&&png.every((h,i)=>h===c.pngSha256[i])};
   if(Object.entries(r).some(([k,v])=>k!=='id'&&v!==true))failed=true;results.push(r);
  }
- if(selfTest){const html=(await readFile(join(gold,'a4-en.html'),'utf8')).replace('background:#102d3a','background:#702d3a');const stem=join(out,'intentional-color-change');await writeFile(stem+'.pdf',await renderer(html));execFileSync('pdftoppm',['-r',String(manifest.dpi),'-png',stem+'.pdf',stem]);const rejected=sha(await readFile(stem+'-1.png'))!==manifest.results.find(c=>c.id==='a4-en').pngSha256[0];results.push({id:'intentional-color-change',visualGuardRejected:rejected});if(!rejected)failed=true;}
+ if(selfTest){
+  const html=(await readFile(join(gold,'a4-en.html'),'utf8')).replace('background:#102d3a','background:#702d3a');
+  let rejected=false;
+  try {
+   const stem=join(out,'intentional-color-change');await writeFile(stem+'.pdf',await renderer(html));
+   execFileSync('pdftoppm',['-r',String(manifest.dpi),'-png',stem+'.pdf',stem]);
+   rejected=sha(await readFile(stem+'-1.png'))!==manifest.results.find(c=>c.id==='a4-en').pngSha256[0];
+  } catch(error) {
+   if(!(error instanceof Error)||!error.message.includes('frozen PDF design changed'))throw error;
+   rejected=true;
+  }
+  results.push({id:'intentional-color-change',visualGuardRejected:rejected});if(!rejected)failed=true;
+ }
 });
 await writeFile(join(out,'results.json'),JSON.stringify({baseline:manifest.sourceFingerprint,results},null,2)+'\n');
 const escape=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');

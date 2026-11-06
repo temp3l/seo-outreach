@@ -31,7 +31,7 @@ function validate(d: unknown): asserts d is Decision {
   if ((cov.exported as number) + (cov.omitted as number) !== cov.captured) throw new TypeError('Exported and omitted counts must equal captured pages');
   if(cov.truncatedPages!==undefined&&(!Number.isSafeInteger(cov.truncatedPages)||(cov.truncatedPages as number)<0||(cov.truncatedPages as number)>(cov.captured as number)))throw new TypeError('Invalid truncated-page count');
   if (!['available','missing','unavailable','unknown'].includes(cov.robots as string)) throw new TypeError('Invalid robots coverage state');
-  if (!Array.isArray(x.findings) || x.findings.length !== 6) throw new TypeError('Exactly six selected findings are required');
+  if (!Array.isArray(x.findings) || (x.findings.length < 1 || x.findings.length > 6)) throw new TypeError('One to six selected findings are required');
   const ids = new Set<string>(); const roots = new Set<string>();
   for (const raw of x.findings) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new TypeError('Invalid finding');
@@ -41,7 +41,7 @@ function validate(d: unknown): asserts d is Decision {
     const id = text(f.id, 'finding.id'); const code = text(f.code, 'finding.code');
     if (!/^[a-f0-9]{24}$/.test(id) || ids.has(id)) throw new TypeError('Finding IDs must be valid and distinct'); ids.add(id);
     const root = alias[code] ?? code;
-    if (!supported.has(root) || roots.has(root)) throw new TypeError('Findings must have six distinct supported root causes'); roots.add(root);
+    if (!supported.has(root) || roots.has(root)) throw new TypeError('Findings must have distinct supported root causes'); roots.add(root);
     text(f.observed, 'finding.observed'); text(f.implication, 'finding.implication'); text(f.fix, 'finding.fix');
     const ref = text(f.reference, 'finding.reference');
     if (ref.startsWith(`${company} — page_`)) {
@@ -61,10 +61,10 @@ const copy: Record<Locale, {opening:string;coverage:(n:number,c:Decision['covera
   'pt-BR': {opening:'INTERNO / EM ESPERA — Somente para revisão interna; a entrega ao cliente está suspensa.',coverage:(n,c)=>`${n} constatações distintas selecionadas. Capturadas: ${c.captured}; exportadas: ${c.exported}; omitidas: ${c.omitted}; com falha: ${c.failed}; não tentadas: ${c.unattempted}; ignoradas: ${c.skipped}; robots: ${c.robots}; páginas com campos truncados: ${c.truncatedPages??'desconhecido'}. Esses números não comprovam a cobertura de todo o site.`,next:'Próxima etapa interna: revisar as evidências, referências e números de cobertura antes de decidir se este relatório pode ser compartilhado.',opportunities:{search:'Melhorar a clareza nos resultados de busca',page:'Deixar mais claras as informações das páginas',index:'Confirmar a visibilidade desejada nas buscas',images:'Melhorar acessibilidade e estabilidade das imagens',data:'Melhorar a interpretação de dados estruturados'}}
 };
 const customerCopy: Record<Locale,{opening:string;next:string}> = {
-  en:{opening:'This review summarizes six distinct observations from captured pages. Each includes its source page, a possible implication, and a suggested next step.',next:'If useful, we can discuss a small, fixed-scope review of one of these findings. Would that be helpful?'},
-  es:{opening:'Esta revisión resume seis observaciones distintas en las páginas capturadas. Cada una incluye su página de origen, una posible implicación y un siguiente paso sugerido.',next:'Si le resulta útil, podemos conversar sobre una revisión pequeña y de alcance fijo de uno de estos hallazgos. ¿Le interesaría?'},
-  de:{opening:'Diese Prüfung fasst sechs unterschiedliche Beobachtungen auf erfassten Seiten zusammen. Jeder Punkt nennt die Quellseite, eine mögliche Auswirkung und einen vorgeschlagenen nächsten Schritt.',next:'Wenn es hilfreich ist, können wir eine kleine Prüfung mit festem Umfang zu einem dieser Befunde besprechen. Wäre das interessant?'},
-  'pt-BR':{opening:'Esta análise resume seis observações distintas nas páginas capturadas. Cada uma inclui sua página de origem, um possível impacto e um próximo passo sugerido.',next:'Se fizer sentido, podemos conversar sobre uma pequena revisão, com escopo definido, de um desses pontos. Você teria interesse?'}
+  en:{opening:'This review summarizes the selected distinct observations from captured pages. Each includes its source page, a possible implication, and a suggested next step.',next:'If useful, we can discuss implementing the top one or two findings. Would that be useful?'},
+  es:{opening:'Esta revisión resume las observaciones seleccionadas en las páginas capturadas. Cada una incluye su página de origen, una posible implicación y un siguiente paso sugerido.',next:'Si le resulta útil, podemos conversar sobre la implementación de uno o dos hallazgos prioritarios. ¿Le interesaría?'},
+  de:{opening:'Diese Prüfung fasst die ausgewählten unterschiedlichen Beobachtungen auf erfassten Seiten zusammen. Jeder Punkt nennt die Quellseite, eine mögliche Auswirkung und einen vorgeschlagenen nächsten Schritt.',next:'Wenn es hilfreich ist, können wir die Umsetzung der ein oder zwei wichtigsten Befunde besprechen. Wäre das interessant?'},
+  'pt-BR':{opening:'Esta análise resume as observações selecionadas nas páginas capturadas. Cada uma inclui sua página de origem, um possível impacto e um próximo passo sugerido.',next:'Se fizer sentido, podemos conversar sobre a implementação de um ou dois pontos prioritários. Você teria interesse?'}
 };
 function opportunityGroups(findings: Finding[]): string[] {
   const codes = new Set(findings.map(f => alias[f.code] ?? f.code));
@@ -77,7 +77,7 @@ function opportunityGroups(findings: Finding[]): string[] {
   return groups;
 }
 
-/** Build internal-review PDF content from a validated six-finding Decision only. */
+/** Build internal-review PDF content from a validated one-to-six-finding Decision only. */
 export function buildReportPdfInput(decision: Decision): CustomerPdfInput {
   validate(decision);
   const locale = decision.locale; const words = copy[locale];

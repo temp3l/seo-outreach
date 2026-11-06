@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEvidenceFixture } from './fixtures/evidence-pack-fixture.mjs';
-import { auditResultSha256, isCustomerReleaseQualified, isReportableEvidenceAdmissible } from '../dist/reports/qualification.js';
+import { auditResultSha256, isCustomerReleaseQualified, isReportableEvidenceAdmissible, assessCustomerReportReadiness } from '../dist/reports/qualification.js';
 import { isAuditResultRecord } from '@spora/webcrawl/core/audit-validation';
 import { auditWebsite } from '@spora/webcrawl/core/audit';
 import { renderCustomerSummaryHtml } from '../dist/reports/summary.js';
@@ -78,12 +78,12 @@ test('broken-link evidence binds page, final URL, redirect chain and source href
     const before = structuredClone(audit);
     assert.equal(isReportableEvidenceAdmissible(audit, link), false);
     const q = qualification(audit);
-    assert.equal(isCustomerReleaseQualified(audit, q), false);
+    assert.equal(isCustomerReleaseQualified(audit, q), true, 'unrelated invalid link is omitted while the supported metadata observation remains');
     for (const locale of ['en', 'de', 'pt-BR']) {
       const sender = { ...issuer, phone: '+31 20 123 4567' };
-      assert.match(renderCustomerSummaryHtml(audit, locale, { issuer: sender, qualification: q }), /data-publication-status="HOLD"/u);
+      assert.match(renderCustomerSummaryHtml(audit, locale, { issuer: sender, qualification: q }), /data-publication-status="CLIENT_READY"/u);
       const mobile = await renderMobileCustomerPdf(audit, async html => Buffer.from(html), sender, locale, 'CLIENT_READY', q);
-      assert.match(decode(mobile), /data-publication-status="HOLD"/u);
+      assert.match(decode(mobile), /data-publication-status="CLIENT_READY"/u);
     }
     assert.doesNotMatch(renderWhatsAppDraft(audit), /returned HTTP 404/u, 'use the valid metadata observation instead');
     audit.findings = [link]; recount(audit);
@@ -118,7 +118,8 @@ test('a recorded allowed seed redirect establishes child-page scope without admi
     ]) {
       const candidate = structuredClone(audit); mutate(candidate);
       assert.ok(isAuditResultRecord(candidate));
-      assert.equal(isCustomerReleaseQualified(candidate, qualification(candidate)), false);
+      assert.equal(isReportableEvidenceAdmissible(candidate,candidate.findings.find(f=>f.code==='missing_h1')),false);
+      assert.doesNotMatch(renderCustomerSummaryHtml(candidate,'en',{issuer,qualification:qualification(candidate)}),/data-issue-code="missing_h1"/);
     }
     assert.deepEqual(audit, original);
   }
@@ -132,7 +133,7 @@ test('duplicate-final aliases preserve captured evidence regardless of outcome o
     updatePageChecks(audit);
     if (reverse) audit.coverage.urls.reverse();
     assert.equal(isReportableEvidenceAdmissible(audit, audit.findings[0]), true);
-    assert.equal(isCustomerReleaseQualified(audit, qualification(audit)), false, 'duplicate skips retain the existing partial security coverage HOLD');
+    assert.equal(isCustomerReleaseQualified(audit, qualification(audit)), true, 'duplicate skips are disclosed while captured evidence remains valid');
     assert.doesNotMatch(renderWhatsAppDraft(audit), /REVIEW_REQUIRED/u);
 
     // The first capture can itself be a redirect; its final URL may later
@@ -176,7 +177,7 @@ test('one to three supported findings release only through the matching explicit
   }
 });
 
-test('missing, mismatched, stale, partial, identity, and private-security qualifications fail closed', () => {
+test('missing, mismatched, stale and identity qualifications fail closed; private observations stay internal', () => {
   const audit = fixture();
   const good = qualification(audit);
   const negatives = [
@@ -191,7 +192,9 @@ test('missing, mismatched, stale, partial, identity, and private-security qualif
   assert.equal(isCustomerReleaseQualified(partial, qualification(partial)), false);
   const privateReview = structuredClone(audit);
   privateReview.findings.push({ code: 'sensitive_form_over_http', category: 'security', observed: 'private', evidence: [{ pageUrl: audit.target, source: 'http', observedAt: audit.startedAt }] });
-  assert.equal(isCustomerReleaseQualified(privateReview, qualification(privateReview)), false);
+  recount(privateReview);
+  assert.equal(isCustomerReleaseQualified(privateReview, qualification(privateReview)), true);
+  assert.doesNotMatch(renderCustomerSummaryHtml(privateReview, 'en', {issuer, qualification:qualification(privateReview)}), /sensitive_form_over_http|>private</u);
   const stale = structuredClone(audit); stale.startedAt = new Date(Date.now() - 48 * 60 * 60_000).toISOString();
   assert.equal(isCustomerReleaseQualified(stale, qualification(stale)), false);
 });
@@ -256,7 +259,7 @@ test('producer-shaped broken-link, image, duplicate metadata, robots and healthy
   updatePageChecks(audit);
   assert.ok(isAuditResultRecord(audit));
   for (const finding of audit.findings) assert.equal(isReportableEvidenceAdmissible(audit, finding), true, finding.code);
-  assert.equal(isCustomerReleaseQualified(audit, qualification(audit)), false, 'the observed 404 still leaves security inspection partial');
+  assert.equal(isCustomerReleaseQualified(audit, qualification(audit)), true, 'the observed 404 does not invalidate independent supported findings');
   audit.coverage.urls.pop();
   audit.crawl.discovered--; audit.crawl.attempted--; audit.crawl.captured--;
   audit.findings = audit.findings.filter(finding => finding !== link);
@@ -277,4 +280,77 @@ test('successful rendering and caller supplied readiness booleans cannot change 
   assert.match(html, /data-publication-status="HOLD"/u);
   assert.match(renderWhatsAppDraft(audit, 'customer.pdf', 'CLIENT_READY'), /Report release:\*\* HOLD/u);
   assert.match(renderWhatsAppDraft(audit, 'customer.pdf', 'CLIENT_READY', qualification(audit)), /Report release:\*\* CLIENT_READY/u);
+});
+
+
+test('scoped report release records crawl/check gaps and omits an unsupported unrelated finding', async () => {
+  const audit = fixture();
+  audit.coverage.urls.push({url:new URL('/not-fetched',audit.target).href,outcome:'unattempted'});
+  audit.crawl.discovered++;audit.crawl.unattempted++;
+  audit.crawl.limitations=['total_response_byte_limit','unattempted_page_urls'];
+  audit.capabilities.http='partial';updatePageChecks(audit);
+  audit.findings.push({code:'missing_h1',category:'content',observed:'Uncorroborated heading observation',evidence:[{pageUrl:new URL('/not-fetched',audit.target).href,source:'http',observedAt:audit.completedAt}]});
+  recount(audit);assert.equal(isAuditResultRecord(audit),true);
+  const assessment=assessCustomerReportReadiness(audit);
+  assert.equal(assessment.status,'READY_FOR_REVIEW');
+  assert.ok(assessment.warnings.includes('captured_scope_only'));
+  assert.ok(assessment.warnings.includes('unsupported_findings_omitted'));
+  assert.equal(isCustomerReleaseQualified(audit,qualification(audit)),true);
+  for(const locale of ['en','de']) {
+    const html=renderCustomerSummaryHtml(audit,locale,{issuer,qualification:qualification(audit)});
+    assert.match(html,/data-publication-status="CLIENT_READY"/);
+    assert.doesNotMatch(html,/data-scope-disclosure="true"|Based on captured pages|Basierend auf erfassten Seiten/);
+    assert.doesNotMatch(html,/data-issue-code="missing_h1"/);
+    const mobile=await renderMobileCustomerPdf(audit,async html=>Buffer.from(html),issuer,locale,'CLIENT_READY',qualification(audit));
+    assert.doesNotMatch(decode(mobile),/data-scope-disclosure="true"|Based on captured pages|Basierend auf erfassten Seiten/);
+  }
+  assert.equal(isCustomerReleaseQualified(audit,{...qualification(audit),auditSha256:'0'.repeat(64)}),false);
+  audit.findings=audit.findings.filter(f=>f.code==='missing_h1');recount(audit);
+  assert.equal(assessCustomerReportReadiness(audit).status,'BLOCKED');
+  assert.equal(isCustomerReleaseQualified(audit,qualification(audit)),false);
+});
+
+
+test('three-topic partial report passes real A4 and mobile layout checks', async () => {
+  const {withPlaywrightPdfSession}=await import('../dist/reports/pdf-playwright.js');
+  const {renderCustomerSummaryPdf}=await import('../dist/reports/summary.js');
+  const audit=fixture();
+  for(const code of ['missing_h1','images_missing_dimensions']) audit.findings.push({code,category:'content',observed:'Recorded observation',evidence:[{pageUrl:audit.target,source:'http',observedAt:audit.completedAt}]});
+  audit.coverage.urls.push({url:new URL('/remaining',audit.target).href,outcome:'unattempted'});
+  audit.crawl.discovered++;audit.crawl.unattempted++;audit.crawl.limitations=['unattempted_page_urls'];audit.capabilities.http='partial';
+  updatePageChecks(audit);recount(audit);
+  const q=qualification(audit);assert.equal(assessCustomerReportReadiness(audit).selectedTopics,3);
+  await withPlaywrightPdfSession(async renderer=>{
+    const a4=await renderCustomerSummaryPdf(audit,renderer,{locale:'en',issuer,qualification:q});
+    const mobile=await renderMobileCustomerPdf(audit,renderer,issuer,'en','CLIENT_READY',q);
+    assert.equal(Buffer.from(a4).subarray(0,5).toString(),'%PDF-');
+    assert.equal(Buffer.from(mobile).subarray(0,5).toString(),'%PDF-');
+  });
+});
+
+
+test('invalid PSI measurements cannot become customer score cards beside a valid independent finding', () => {
+  for(const mutate of [
+    f=>{f.evidence[0].observedAt='2020-01-01T00:00:00.000Z';},
+    f=>{f.evidence[0].observedAt=new Date(Date.now()+86400000).toISOString();},
+    f=>{f.category='metadata';},
+    f=>{f.evidence.push({...f.evidence[0]});},
+    f=>{f.evidence[0].source='http';},
+  ]) {
+    const audit=fixture();
+    const psi={code:'pagespeed_category_score',category:'performance',observed:'performance score: 42/100.',evidence:[{pageUrl:audit.target,source:'pagespeed',value:42,observedAt:audit.completedAt}]};
+    mutate(psi);audit.findings.push(psi);recount(audit);
+    assert.equal(isCustomerReleaseQualified(audit,qualification(audit)),true);
+    const html=renderCustomerSummaryHtml(audit,'en',{issuer,qualification:qualification(audit)});
+    assert.match(html,/data-publication-status="CLIENT_READY"/);
+    assert.doesNotMatch(html,/Performance 42\/100|score: 42\/100|>42</);
+  }
+});
+
+test('unsupported noindex observation cannot suppress an independently supported metadata finding',()=>{
+ const audit=fixture();audit.findings.push({code:'noindex',category:'indexability',observed:'Untrusted noindex',evidence:[{pageUrl:audit.target,source:'http',observedAt:'2020-01-01T00:00:00.000Z'}]});recount(audit);
+ assert.equal(isCustomerReleaseQualified(audit,qualification(audit)),true);
+ const html=renderCustomerSummaryHtml(audit,'en',{issuer,qualification:qualification(audit)});
+ assert.match(html,/data-issue-code="missing_meta_description"/);
+ assert.doesNotMatch(html,/data-issue-code="noindex"/);
 });

@@ -3,7 +3,7 @@ export { renderCustomerSummaryHtml, renderCustomerSummaryPdf, renderOperatorStat
 export type { SummaryLocale, CustomerLocale, ReportContact } from './summary.js';
 export type { PdfRenderer } from './html.js';
 export { playwrightPdfRenderer, withPlaywrightPdfSession } from './pdf-playwright.js';
-export { auditResultSha256, isCustomerReleaseQualified } from './qualification.js';
+export { auditResultSha256, isCustomerReleaseQualified, assessCustomerReportReadiness } from './qualification.js';
 export type { CustomerReleaseQualification } from './qualification.js';
 export { createCustomerReviewManifest, CUSTOMER_REVIEW_PROFILE } from './review.js';
 export * from './customer.js';
