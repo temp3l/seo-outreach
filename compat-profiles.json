@@ -3,7 +3,7 @@
   "defaultProfile": "default",
   "profiles": {
     "default": {
-      "description": "School capture with PSI, PDF reports, and configurable retries.",
+      "description": "School capture with PSI, customer PDFs, and configurable retries. Operator status PDFs are opt-in.",
       "pages": 500,
       "requests": 2500,
       "runtime-ms": 900000,
@@ -20,6 +20,7 @@
       "pagespeed": true,
       "pagespeed-include-query": false,
       "pdf": true,
+      "operator-pdf": false,
       "browser": false,
       "contacts": true,
       "technology": true,

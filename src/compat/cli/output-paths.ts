@@ -33,20 +33,22 @@ export function planSingleSiteOutputs(args: readonly string[], options: ProfileO
   const pageDataPath = resolvePageDataOutputPath(out, resolvedEvidencePackPath !== undefined, noPageData, explicitPageDataPath, includeRawPageData) ?? (options['page-data'] ? `${out}.page-data.json` : undefined);
   const resolvedPageDataPath = pageDataPath === undefined ? undefined : resolve(pageDataPath);
   if (args.includes('--pdf') && args.includes('--no-pdf')) throw new Error('--pdf and --no-pdf are mutually exclusive');
+  if (args.includes('--operator-pdf') && args.includes('--no-operator-pdf')) throw new Error('--operator-pdf and --no-operator-pdf are mutually exclusive');
   const writePdf = options.pdf;
+  const writeOperatorPdf = options['operator-pdf'];
   const customerPdfPath = options['pdf-locale'] === 'de' ? `${out}.report-de.pdf` : `${out}.pdf`;
   const mobilePdfPath = `${out}.mobile${options['pdf-locale'] === 'de' ? '-de' : ''}.pdf`;
   const operatorPdfPath = `${out}.operator-status.pdf`;
   const reviewManifestPath = `${out}.review.json`;
-  const pdfPaths = [customerPdfPath, mobilePdfPath, operatorPdfPath, reviewManifestPath];
+  const pdfPaths = [...(writePdf ? [customerPdfPath, mobilePdfPath, reviewManifestPath] : []), ...(writeOperatorPdf ? [operatorPdfPath] : [])];
   const runLogPath = `${out}.run.log`;
   const auditJsonPath = `${out}.json`;
   const auditHtmlPath = `${out}.html`;
   const scanStatusPath = `${out}.scan-status.json`;
   const whatsappDraftPath = `${out}.whatsapp-draft.md`;
-  const outputPaths = [runLogPath, auditJsonPath, auditHtmlPath, scanStatusPath, whatsappDraftPath, ...(resolvedPageDataPath ? [resolvedPageDataPath] : []), ...(resolvedEvidencePackPath ? [resolvedEvidencePackPath] : []), ...(writePdf ? pdfPaths : [])];
+  const outputPaths = [runLogPath, auditJsonPath, auditHtmlPath, scanStatusPath, whatsappDraftPath, ...(resolvedPageDataPath ? [resolvedPageDataPath] : []), ...(resolvedEvidencePackPath ? [resolvedEvidencePackPath] : []), ...pdfPaths];
   const privatePaths = (includeRawPageData || explicitPageDataPath !== undefined) && resolvedPageDataPath ? [resolvedPageDataPath] : [];
-  return { runLogPath, auditJsonPath, auditHtmlPath, scanStatusPath, operatorPdfPath, reviewManifestPath, resolvedEvidencePackPath, resolvedPageDataPath, includeRawPageData, writePdf, customerPdfPath, mobilePdfPath, whatsappDraftPath, outputPaths, privatePaths };
+  return { runLogPath, auditJsonPath, auditHtmlPath, scanStatusPath, operatorPdfPath, reviewManifestPath, resolvedEvidencePackPath, resolvedPageDataPath, includeRawPageData, writePdf, writeOperatorPdf, customerPdfPath, mobilePdfPath, whatsappDraftPath, outputPaths, privatePaths };
 }
 
 export async function validateOutputPaths(paths: readonly string[], privatePaths: readonly string[] = []): Promise<void> {

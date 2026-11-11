@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
 import { bundledProfilesPath, loadProfiles, resolveProfileOptions } from '../dist/compat/cli/profiles.js';
+import { planSingleSiteOutputs } from '../dist/compat/cli/output-paths.js';
 const exec = promisify(execFile);
 const cli = new URL('../dist/compat/cli.js', import.meta.url);
 async function temporary(fn) {
@@ -23,6 +24,7 @@ test('bundled configuration is loaded live and fast inherits its editable defaul
   const catalog = await loadProfiles();
   assert.equal(catalog.defaultProfile, file.defaultProfile);
   assert.equal(catalog.profiles.default.options['pdf-locale'], 'en');
+  assert.equal(catalog.profiles.default.options['operator-pdf'], false);
   const { description: _description, extends: _extends, ...expected } = file.profiles.default;
   assert.deepEqual(catalog.profiles.default.options, expected);
   const { description: _fastDescription, extends: parent, ...fastOverrides } = file.profiles.fast;
@@ -41,10 +43,29 @@ test('CLI overrides inherited settings and can turn off inherited features', asy
   const base = (await loadProfiles()).profiles.fast.options;
   const options = resolveProfileOptions({ ...base, browser: 'auto', images: true, 'security-txt': true, 'page-data-html': true }, ['--pages', '20', '--interval-ms', '0', '--locale', 'de', '--pdf-locale', 'de', '--no-pdf', '--no-evidence-pack', '--no-browser', '--no-images', '--no-security-txt', '--no-progress', '--no-page-data']);
   assert.deepEqual([options.pages, options['interval-ms'], options.locale, options['pdf-locale']], [20, 0, 'de', 'de']);
-  for (const key of ['pdf', 'evidence-pack', 'browser', 'images', 'security-txt', 'progress', 'page-data', 'page-data-html']) assert.equal(options[key], false, key);
+  for (const key of ['pdf', 'operator-pdf', 'evidence-pack', 'browser', 'images', 'security-txt', 'progress', 'page-data', 'page-data-html']) assert.equal(options[key], false, key);
   assert.throws(() => resolveProfileOptions(base, ['--pdf', '--no-pdf']), /mutually exclusive/);
+  assert.throws(() => resolveProfileOptions(base, ['--operator-pdf', '--no-operator-pdf']), /mutually exclusive/);
+  assert.equal(resolveProfileOptions(base, ['--operator-pdf'])['operator-pdf'], true);
+  assert.equal(resolveProfileOptions({ ...base, 'operator-pdf': true }, ['--no-operator-pdf'])['operator-pdf'], false);
   assert.throws(() => resolveProfileOptions(base, ['--browser', '--browser=auto']), /conflicting_browser/);
   assert.throws(() => resolveProfileOptions(base, ['--no-page-data', '--page-data-html']), /cannot be combined/);
+});
+
+test('operator PDF is opt-in and can be planned independently from customer PDFs', async () => {
+  const base = (await loadProfiles()).profiles.default.options;
+  const defaultPlan = planSingleSiteOutputs(['https://fixture.example/', '--out', '/tmp/operator-opt-in-default'], base);
+  assert.equal(defaultPlan.writePdf, true);
+  assert.equal(defaultPlan.writeOperatorPdf, false);
+  assert.ok(defaultPlan.outputPaths.includes('/tmp/operator-opt-in-default.pdf'));
+  assert.ok(!defaultPlan.outputPaths.includes('/tmp/operator-opt-in-default.operator-status.pdf'));
+
+  const operatorOnly = resolveProfileOptions(base, ['--no-pdf', '--operator-pdf']);
+  const operatorPlan = planSingleSiteOutputs(['https://fixture.example/', '--out', '/tmp/operator-opt-in-only', '--no-pdf', '--operator-pdf'], operatorOnly);
+  assert.equal(operatorPlan.writePdf, false);
+  assert.equal(operatorPlan.writeOperatorPdf, true);
+  assert.deepEqual(operatorPlan.outputPaths.filter(path => path.endsWith('.pdf')), ['/tmp/operator-opt-in-only.operator-status.pdf']);
+  assert.ok(!operatorPlan.outputPaths.includes('/tmp/operator-opt-in-only.review.json'));
 });
 
 test('PSI enabled in a profile does not implicitly opt in to sending query parameters', async () => {

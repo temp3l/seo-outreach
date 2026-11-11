@@ -65,7 +65,7 @@ export class ProgressReporter {
   }
   reused(): void { this.output('site reused verified_saved_result'); }
 
-  private active: { phase: ProgressPhase; started: number; lastUpdate: number; counts?: ProgressCounts } | undefined;
+  private active: { phase: ProgressPhase; started: number; cpu: NodeJS.CpuUsage; lastUpdate: number; counts?: ProgressCounts } | undefined;
 
   constructor(private readonly write: (line: string) => void, private readonly clock: Clock = systemClock, private readonly intervalMs = 10_000) { this.started = clock.now(); }
 
@@ -74,7 +74,7 @@ export class ProgressReporter {
   begin(phase: ProgressPhase): void {
     const now = this.clock.now();
     if (this.active) this.finish(this.active.counts);
-    this.active = { phase, started: now, lastUpdate: now };
+    this.active = { phase, started: now, cpu: process.cpuUsage(), lastUpdate: now };
     this.output(`${phase} start`);
   }
 
@@ -93,14 +93,19 @@ export class ProgressReporter {
     const active = this.active;
     if (!active) return;
     if (counts) { active.counts = counts; this.rememberCounts(counts); }
-    this.output(`${active.phase} complete${this.countLabel(active.counts)} phase_ms=${Math.max(0, Math.round(this.clock.now() - active.started))}`);
+    this.output(`${active.phase} complete${this.countLabel(active.counts)} phase_ms=${Math.max(0, Math.round(this.clock.now() - active.started))}${this.resourceLabel(active.cpu)}`);
     this.active = undefined;
+  }
+
+  private resourceLabel(start: NodeJS.CpuUsage): string {
+    const cpu = process.cpuUsage(start);
+    return ` process_cpu_user_ms=${(cpu.user / 1000).toFixed(3)} process_cpu_system_ms=${(cpu.system / 1000).toFixed(3)} process_peak_rss_kib=${process.resourceUsage().maxRSS}`;
   }
 
   fail(category: string): void {
     const active = this.active;
     if (active) {
-      this.output(`${active.phase} failed${this.countLabel(active.counts)} phase_ms=${Math.max(0, Math.round(this.clock.now() - active.started))}`);
+      this.output(`${active.phase} failed${this.countLabel(active.counts)} phase_ms=${Math.max(0, Math.round(this.clock.now() - active.started))}${this.resourceLabel(active.cpu)}`);
       this.active = undefined;
     }
     const action = ({missing_dependency: 'install_package_dependencies', browser_runtime_missing: 'install_chromium_with_pnpm_exec_playwright_install_chromium', permission_denied: 'check_output_directory_permissions', storage_full: 'free_disk_space_or_check_quota', readonly_filesystem: 'choose_a_writable_output_directory', file_not_found: 'check_input_files_and_output_directory', resource_limit: 'close_other_processes_or_raise_file_limit', operation_timeout: 'check_runtime_limits_and_retry', operation_aborted: 'retry_when_ready', batch_input_changed: 'use_original_csv_or_a_new_output_directory', batch_locked: 'wait_for_the_running_batch', unsafe_log_file: 'use_a_new_output_directory', output_conflict: 'use_a_new_output_prefix', output_directory_missing: 'create_output_directory', invalid_options: 'check_cli_options', client_report_not_ready: 'review_evidence_and_issuer', operation_failed: 'inspect_audit_and_retry_if_appropriate'} as Record<string,string>)[category] ?? 'inspect_audit_and_run_log';

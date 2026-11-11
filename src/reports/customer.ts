@@ -26,10 +26,18 @@ function routineCustomerPage(raw: string, target: string, seedFinal?: string): b
 const pages = (findings: readonly AuditFinding[]): ReportPageReference[] => reportPageReferences(findings).sort((a,b) => Number(commercial(b.url)) - Number(commercial(a.url)) || Number(nonOffer(a.url)) - Number(nonOffer(b.url)) || new URL(a.url).pathname.split('/').filter(Boolean).length - new URL(b.url).pathname.split('/').filter(Boolean).length || a.url.localeCompare(b.url));
 export type CustomerPriority = { code: string; measurement?: 'performance'; title: string; observed: string; why: string; action: string; owner: string; urls: ReportPageReference[]; rank: number; group: number; severity?: number };
 
+/** Sort JSON-shaped audit data with the existing localeCompare order while
+ * serializing each item once instead of once per sort comparison. */
+function sortByJsonKey<T>(values: readonly T[]): T[] {
+  return values.map((value, index) => ({ value, index, key: JSON.stringify(value)! }))
+    .sort((a, b) => a.key.localeCompare(b.key) || a.index - b.index)
+    .map(({ value }) => value);
+}
+
 /** Resolve the exact selected example once for reports, drafts and handoff. */
 export function customerPriorityObservation(findings: readonly AuditFinding[], topic: CustomerPriority): { finding: AuditFinding; evidence: FindingEvidence } | undefined {
   const ref = topic.urls[0];
-  return findings.filter(f => f.code === topic.code && (!topic.measurement || f.observed.toLowerCase().startsWith(`${topic.measurement} score:`)))
+  const candidates = findings.filter(f => f.code === topic.code && (!topic.measurement || f.observed.toLowerCase().startsWith(`${topic.measurement} score:`)))
     .flatMap(finding => finding.evidence.filter(e => reportPageReference(e.pageUrl)?.identity === ref?.identity).map(evidence => {
       if (finding.code === 'broken_internal_link' && !evidence.anchorHref) {
         const identity = reportPageReference(evidence.requestedUrl ?? evidence.pageUrl)?.identity;
@@ -39,8 +47,22 @@ export function customerPriorityObservation(findings: readonly AuditFinding[], t
         if (referring) return { finding, evidence: referring };
       }
       return { finding, evidence };
-    }))
-    .sort((a,b) => (topic.measurement ? -1 : 1) * (Date.parse(a.evidence.observedAt) - Date.parse(b.evidence.observedAt)) || JSON.stringify(a).localeCompare(JSON.stringify(b)))[0];
+    }));
+  const keyed = candidates.map((value, index) => ({
+    value,
+    index,
+    timestamp: Date.parse(value.evidence.observedAt),
+    key: undefined as string | undefined,
+  }));
+  return keyed.sort((a, b) => {
+    const timeOrder = (topic.measurement ? -1 : 1) * (a.timestamp - b.timestamp);
+    if (timeOrder) return timeOrder;
+    // Most evidence has distinct timestamps. Preserve the legacy JSON
+    // tiebreak while computing it only for candidates that need it.
+    a.key ??= JSON.stringify(a.value)!;
+    b.key ??= JSON.stringify(b.value)!;
+    return a.key.localeCompare(b.key) || a.index - b.index;
+  })[0]?.value;
 }
 
 // Join original captured URL identities before share-safe query redaction.
@@ -165,7 +187,12 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
   const de = locale === 'de';
   const t = (en: string, german: string): string => de ? german : en;
   const topics: CustomerPriority[] = [];
-  const orderedFindings = result.findings.map(f => ({ ...f, evidence: f.code === 'image_file_too_large' && f.evidence.length ? [f.evidence[0]!, ...f.evidence.slice(1).sort((a,b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))] : [...f.evidence].sort((a,b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) })).sort((a,b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  const orderedFindings = sortByJsonKey(result.findings.map(f => ({
+    ...f,
+    evidence: f.code === 'image_file_too_large' && f.evidence.length
+      ? [f.evidence[0]!, ...sortByJsonKey(f.evidence.slice(1))]
+      : sortByJsonKey(f.evidence),
+  })));
   const noindex = new Set(orderedFindings.filter(f=>f.code==='noindex' && isReportableEvidenceAdmissible(result,f)).flatMap(f=>f.evidence.map(e=>captureKey(e.pageUrl)).filter((key): key is string=>key!==undefined)));
   const errorPageKeys = new Set(result.coverage?.urls.filter(item => item.outcome === 'captured' && (item.statusCode === 404 || item.statusCode === 410)).flatMap(item => [item.url, item.finalUrl].filter((url): url is string => Boolean(url)).map(url => captureKey(url)).filter((key): key is string => key !== undefined)) ?? []);
 

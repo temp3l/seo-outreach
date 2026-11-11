@@ -221,7 +221,7 @@ export async function runSiteJobs(jobs: readonly SiteJob[], options: RunnerOptio
 
 async function main(args: string[]): Promise<void> {
   if (args.includes('--help')) {
-    process.stdout.write('Usage: webcrawl-sites <jobs.json> [--site-concurrency <1..32>] [--pdf-concurrency <1..32>]\nThe JSON file is an array of single-site CLI argument arrays, each starting with a URL and including --out. Defaults: 4 sites, 1 PDF worker. Existing profiles, checks and PDFs apply to each site. Create a separate output parent per site; all enabled exports must stay in that site directory.\n');
+    process.stdout.write('Usage: webcrawl-sites <jobs.json> [--site-concurrency <1..32>] [--pdf-concurrency <1..32>]\nThe JSON file is an array of single-site CLI argument arrays, each starting with a URL and including --out. Defaults: 4 sites, 1 PDF worker. Customer PDFs remain enabled by default; operator status PDFs require --operator-pdf in a job. Existing profiles and checks apply to each site. Create a separate output parent per site; all enabled exports must stay in that site directory.\n');
     return;
   }
   let file: string | undefined;

@@ -113,7 +113,7 @@ test('one injected crawl publishes a safe evidence pack and separate private pag
   const zipPath = `${root}/evidence.zip`;
   const issuerPath = `${root}/issuer.json`;
   await writeFile(issuerPath, JSON.stringify({name:'PRIVATE_ISSUER_FIXTURE',email:'private-issuer@example.test'}), {mode:0o600});
-  await runCli(['https://fixture.example/', '--out', out, '--evidence-pack', zipPath, '--page-data', privatePath, '--page-data-html', '--pdf', '--report-contact-file', issuerPath, ...common], fixture);
+  await runCli(['https://fixture.example/', '--out', out, '--evidence-pack', zipPath, '--page-data', privatePath, '--page-data-html', '--pdf', '--operator-pdf', '--report-contact-file', issuerPath, ...common], fixture);
   const firstTrace = [...trace];
   assert.deepEqual(firstTrace, ['GET:/robots.txt', 'GET:/', 'GET:/contact', 'GET:/contact-us', 'HEAD:/hero.jpg']);
   const audit = JSON.parse(await readFile(`${out}.json`, 'utf8'));

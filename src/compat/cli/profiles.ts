@@ -7,7 +7,7 @@ const numericOptions = {
   concurrency: [1, 100], 'interval-ms': [0, 60_000], retries: [0, 10],
   'image-checks': [0, 1_000], 'large-image-bytes': [1, 20_000_000],
 } as const;
-const booleanOptions = ['respect-robots', 'pagespeed', 'pagespeed-include-query', 'pdf', 'contacts', 'technology', 'images', 'security-txt', 'evidence-pack', 'page-data', 'page-data-html', 'progress'] as const;
+const booleanOptions = ['respect-robots', 'pagespeed', 'pagespeed-include-query', 'pdf', 'operator-pdf', 'contacts', 'technology', 'images', 'security-txt', 'evidence-pack', 'page-data', 'page-data-html', 'progress'] as const;
 export type ProfileOptions = { [K in keyof typeof numericOptions]: number }
   & { [K in typeof booleanOptions[number]]: boolean }
   & { browser: boolean | 'auto'; locale: 'en' | 'de'; 'pdf-locale': 'en' | 'de'; 'user-agent': string };

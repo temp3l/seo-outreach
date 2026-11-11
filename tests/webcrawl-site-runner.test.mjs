@@ -90,7 +90,7 @@ test('launcher runs real CLI output/profile/locale variations with the shared PD
     await writeFile(`${root}/issuer.json`, JSON.stringify({ name: 'Synthetic Reviewer', email: 'reviewer@example.test' }), { mode: 0o600 });
     await writeFile(`${root}/profiles.json`, JSON.stringify({ version: 1, defaultProfile: 'offline', profiles: {
       offline: { extends: 'default', pdf: false, pagespeed: false, images: false, progress: false, pages: 1, requests: 3, retries: 0, 'interval-ms': 0, 'evidence-pack': true, 'page-data': true },
-      german: { extends: 'offline', pdf: true, 'pdf-locale': 'de', 'page-data-html': true },
+      german: { extends: 'offline', pdf: true, 'operator-pdf': true, 'pdf-locale': 'de', 'page-data-html': true },
     } }));
     const base = index => [...job(root, index), '--profiles-file', `${root}/profiles.json`];
     const results = await runSiteJobs([

@@ -94,8 +94,9 @@ test('CLI accepts batch progress and HOLD publication preserves evidence with a 
   assert.match(await readFile(`${dir}/batch/batch.run.log`,'utf8'),/success status=/);
   await writeFile(`${dir}/issuer.json`,JSON.stringify({name:'PRIVATE_ISSUER',email:'PRIVATE_ISSUER@example.test'}),{mode:0o600});
   const args=flags.filter(value=>value!=='--no-pdf');
-  await runCli(['https://fixture.example/','--out',`${dir}/pdf`,'--no-progress','--pdf','--report-contact-file',`${dir}/issuer.json`,...args],transport);
+  await runCli(['https://fixture.example/','--out',`${dir}/pdf`,'--no-progress','--pdf','--operator-pdf','--report-contact-file',`${dir}/issuer.json`,...args],transport);
   assert.equal(JSON.parse(await readFile(`${dir}/pdf.json`,'utf8')).target,'https://fixture.example/');
+  assert.equal((await readFile(`${dir}/pdf.operator-status.pdf`)).subarray(0,5).toString('ascii'),'%PDF-');
   const englishPdfText=execFileSync('pdftotext',['-layout',`${dir}/pdf.pdf`,'-'],{encoding:'utf8'});
   assert.doesNotMatch(englishPdfText,/\bHOLD\b/u);
   await assertReviewSidecar(`${dir}/pdf`,'en',[`${dir}/pdf.pdf`,`${dir}/pdf.mobile.pdf`]);
@@ -104,7 +105,7 @@ test('CLI accepts batch progress and HOLD publication preserves evidence with a 
   assert.match(log,/optional-pdfs complete/);assert.match(log,/publication\] status=HOLD locale=en/);assert.doesNotMatch(log,/publication\] status=HOLD locale=de/);assert.match(log,/success status=/);
   assert.doesNotMatch(log,/PRIVATE_ISSUER|@|https:/);
   const germanOut=`${dir}/pdf-de`;
-  await runCli(['https://fixture.example/','--out',germanOut,'--no-progress','--pdf-locale','de','--report-contact-file',`${dir}/issuer.json`,...args],transport);
+  await runCli(['https://fixture.example/','--out',germanOut,'--no-progress','--pdf-locale','de','--operator-pdf','--report-contact-file',`${dir}/issuer.json`,...args],transport);
   const germanPdfText=execFileSync('pdftotext',['-layout',`${germanOut}.report-de.pdf`,'-'],{encoding:'utf8'});
   assert.doesNotMatch(germanPdfText,/\bHOLD\b|NICHT ZUR KUNDENWEITERGABE/u);
   await assertReviewSidecar(germanOut,'de',[`${germanOut}.report-de.pdf`,`${germanOut}.mobile-de.pdf`]);
@@ -112,6 +113,20 @@ test('CLI accepts batch progress and HOLD publication preserves evidence with a 
   assert.match(await readFile(`${germanOut}.whatsapp-draft.md`,'utf8'),/pdf-de\.report-de\.pdf/u);
   await new Promise(resolve=>setTimeout(resolve,30));assert.equal(await readFile(`${dir}/pdf.run.log`,'utf8'),log);
  } finally {await rm(dir,{recursive:true,force:true});}
+});
+
+test('operator status PDF can be generated on demand without customer PDFs or publisher contact',async()=>{
+ const dir=await mkdtemp('/tmp/webcrawl-operator-pdf-opt-in-');
+ try{
+  const out=`${dir}/operator-only`;
+  await runCli(['https://fixture.example/','--out',out,'--no-progress','--no-pdf','--operator-pdf','--no-pagespeed','--no-contacts','--no-technology','--no-images','--pages','1','--requests','3','--interval-ms','0','--retries','0'],{
+   resolveAddresses,
+   request:async()=>response(200,'<html lang="en"><head><title>Fixture</title></head><body><main><h1>Fixture</h1></main></body></html>'),
+  });
+  assert.equal((await readFile(`${out}.operator-status.pdf`)).subarray(0,5).toString('ascii'),'%PDF-');
+  for(const suffix of ['.pdf','.mobile.pdf','.review.json']) await assert.rejects(readFile(`${out}${suffix}`),{code:'ENOENT'});
+  assert.match(await readFile(`${out}.run.log`,'utf8'),/optional-pdfs complete/);
+ }finally{await rm(dir,{recursive:true,force:true});}
 });
 
 test('browser navigation, resource redirects and errors all reach live logging without changing accounting',async()=>{
