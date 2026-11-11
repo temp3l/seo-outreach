@@ -21,7 +21,7 @@ test('customer summaries preserve up to six supported topics but booleans never 
  audit.findings=[{code:'http_status_error',category:'indexability',observed:'HTTP 429 and missing pages',evidence:[e(429),e(404),e(410)]},{code:'multiple_h1',category:'content',observed:'document H1',evidence:[e(3)]}];
  const before=JSON.stringify(audit);
  let html=renderCustomerSummaryHtml(audit);assert.doesNotMatch(html,/error status codes/);assert.doesNotMatch(html,/multiple main headings|429/);assert.equal(JSON.stringify(audit),before);assert.match(renderOperatorStatusHtml(audit),/429/);
- audit.findings[0].evidence=[e(429),e(undefined)];html=renderCustomerSummaryHtml(audit);assert.doesNotMatch(html,/error status codes/);assert.match(html,/<strong>0<\/strong>topics to review/);
+ audit.findings[0].evidence=[e(429),e(undefined)];html=renderCustomerSummaryHtml(audit);assert.doesNotMatch(html,/error status codes/);assert.match(html,/<strong>0<\/strong>topics<\/div>/);
  const issuer={name:'Reviewer',email:'reviewer@example.test'};
  assert.match(renderCustomerSummaryHtml(audit,'en',{issuer,clientReady:true}),/data-publication-status="HOLD"/u);
  audit.findings=['missing_canonical','missing_meta_description','title_long','images_missing_alt','missing_h1','heading_hierarchy_skip','images_missing_dimensions'].map(code=>({code,category:'content',observed:code,evidence:[e(undefined)]}));
