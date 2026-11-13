@@ -50,7 +50,7 @@ test('customer briefing uses plain-language priorities and a separate developer 
   assert.ok(!html.includes('unique check codes'));
   assert.ok(!html.includes('affected URLs'));
   assert.ok(!html.includes('recommended tasks'));
-  assert.ok(html.includes('Not run for this audit.'));
+  assert.ok(html.includes('Mobile performance was not measured in this run.'));
   assert.doesNotMatch(html, /Coverage limitations|partial coverage|Internal draft/u);
   assert.ok(!html.includes('Scores could not be retrieved'));
   assert.ok(!/stephan rebien|stephanrebien@gmail\.com|\+49 170 8854 857/iu.test(html));
@@ -64,7 +64,7 @@ test('customer summary shows the selected topic count without added observation 
   const findings = ['indexability', 'metadata', 'content', 'performance', 'accessibility', 'security'].map(make);
   for (const locale of ['en', 'de']) {
     const html = renderCustomerSummaryHtml({ ...result, findings }, locale);
-    assert.match(html, locale === 'en' ? /<strong>4<\/strong>topics to review/u : /<strong>4<\/strong>Themen zum Prüfen/u);
+    assert.match(html, locale === 'en' ? /<strong>3<\/strong>topics/u : /<strong>3<\/strong>Themen/u);
     assert.doesNotMatch(html, /addresses discovered|Adressen entdeckt|Additional observations|Weitere Beobachtungen|Security observations also|Sicherheitsbeobachtungen sollten|Routine search warnings|SEO-Routinehinweise/u);
   }
 });
@@ -193,7 +193,7 @@ test('noindex joins retain query identity and cross-page duplicates require two 
   assert.match(renderCustomerSummaryHtml({...result,findings:[ni,heading]}),/Missing main headings/u);
   const duplicate={code:'duplicate_title_across_pages',category:'metadata',observed:'Same title',evidence:[e(base+'?token=one'),e('https://example.test/courses/other')]};
   assert.doesNotMatch(renderCustomerSummaryHtml({...result,findings:[ni,duplicate]}),/Repeated page titles/u);
-  assert.match(renderCustomerSummaryHtml({...result,findings:[ni,{...duplicate,evidence:[...duplicate.evidence,e('https://example.test/courses/third')]}]}),/Repeated page titles/u);
+  assert.doesNotMatch(renderCustomerSummaryHtml({...result,findings:[ni,{...duplicate,evidence:[...duplicate.evidence,e('https://example.test/courses/third')]}]}),/Repeated page titles/u); // Raw duplicate records need independent source evidence.
 });
 
 test('issuer configuration is explicit, escaped, validated and absent from operator output', async () => {

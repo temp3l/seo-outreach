@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { isAbsolute } from 'node:path';
 import type { AuditFinding, AuditResult } from '@spora/webcrawl';
 import { auditResultSha256 } from './qualification.js';
-import { customerPriorityProjection } from './customer.js';
+import { customerPriorityProjection, customerPriorityTitle, customerPriorityPageLabel } from './customer.js';
+import { mobileLcpEvidence } from './performance-evidence.js';
 import { attachedCustomerEvidence, customerEvidenceReference, prepareCustomerEvidenceTriage } from './customer-evidence.js';
 import { CUSTOMER_PDF_DESIGN } from './design-contract.js';
 import { reportEvidenceCounts } from './references.js';
@@ -39,6 +40,24 @@ export function createCustomerReviewManifest(result: AuditResult, locale: 'en' |
     scanExecutionStatus: classifyScanCompletion(result, data).executionStatus,
     scanCoverageStatus: classifyScanCompletion(result, data).coverageStatus,
     customerObservationCount: projection.deduplicatedIssues,
+    selectedTopics: projection.selected.map((topic, index) => ({
+      index,
+      code: topic.code,
+      findingCodes: projection.selectedEvidenceCodes[index]?.findingCodes ?? [topic.code],
+      title: customerPriorityTitle(topic, locale),
+      pageLabel: customerPriorityPageLabel(result, topic, projection.customerFindings, locale),
+      selectionRationale: { rank: topic.rank, group: topic.group },
+      observed: topic.observed,
+      explanation: topic.why,
+      nextStep: topic.action,
+      measurement: topic.measurement ?? null,
+      performanceEvidence: topic.measurement === 'performance' ? (() => { const lab = mobileLcpEvidence(result); return lab ? { fetchTime: lab.fetchTime, milliseconds: lab.milliseconds, performanceScore: lab.performanceScore, responseSha256: lab.sha256 ?? null, association: lab.association ?? null } : null; })() : null,
+      severity: topic.severity,
+      urls: topic.urls.map(page => ({ url: page.url, identity: page.identity, redacted: page.redacted })),
+      evidenceReferences: projection.countedFindings.flatMap(finding => (projection.selectedEvidenceCodes[index]?.findingCodes ?? [topic.code]).includes(finding.code)
+        ? finding.evidence.flatMap(item => { const reference = sourceEvidence.get(item)?.find(value => value.code === finding.code); return reference ? [{ findingIndex: reference.findingIndex, evidenceIndex: reference.evidenceIndex }] : []; })
+        : []),
+    })),
     admittedEvidenceReferences: admittedReferences.slice(0, 100_000),
     admittedEvidenceReferencesOmitted: Math.max(0, admittedReferences.length - 100_000),
     customerObservationUnit: 'deduplicated admitted checks by page, link destination or asset',

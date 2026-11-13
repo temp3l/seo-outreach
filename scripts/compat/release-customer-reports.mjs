@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { restoreSavedMobileLabEvidence } from '../../dist/reports/performance-evidence.js';
+import { cardLinksMatch } from './pdf-card-links.mjs';
 import { observationScope } from '../../dist/reports/observation-scope.js';
 import { withReleaseUnit } from './customer-release-unit.mjs';
 import { constants } from 'node:fs';
@@ -19,7 +20,7 @@ import { withPlaywrightPdfSession } from '../../dist/reports/pdf-playwright.js';
 import { readReportContactFile } from '../../dist/reports/report-contact.js';
 import { reportPageReference } from '../../dist/reports/references.js';
 import { withCustomerEvidence } from '../../dist/reports/customer-evidence.js';
-import { customerPriorityProjection } from '../../dist/reports/customer.js';
+import { customerPriorityProjection, customerPageLabel } from '../../dist/reports/customer.js';
 import { sanitizeEvidenceUrl } from '@spora/webcrawl/analysis/page-data';
 import { CUSTOMER_PDF_DESIGN } from '../../dist/reports/design-contract.js';
 import { createCustomerReviewManifest } from '../../dist/reports/review.js';
@@ -138,7 +139,7 @@ async function runReviewed(options) {
     if (!data || data.schemaVersion !== '1' || !Array.isArray(data.pages) || data.pages.length > 10_000 || sha256(Buffer.from(JSON.stringify(data))) !== review.pageEvidenceSha256 || data.auditSha256 !== auditResultSha256(audit) || data.target !== sanitizeEvidenceUrl(audit.target) || data.auditStartedAt !== audit.startedAt || data.auditCompletedAt !== audit.completedAt) throw new Error('review_manifest_mismatch');
     audit = withCustomerEvidence(audit, data, { path: review.pageEvidencePath, sha256: review.pageEvidenceFileSha256 });
   } else if (review.pageEvidencePath !== undefined || review.pageEvidenceFileSha256 !== undefined) throw new Error('review_manifest_invalid');
-  await restoreSavedMobileLabEvidence(audit, review.mobileLabEvidence);
+  await restoreSavedMobileLabEvidence(audit, review.mobileLabEvidence, review.mobileLabEvidence?.association ?? undefined);
   if (!Number.isSafeInteger(review.customerObservationCount) || review.customerObservationCount < 0 || review.customerObservationUnit !== 'deduplicated admitted checks by page, link destination or asset' || review.customerObservationCount !== customerPriorityProjection(audit).deduplicatedIssues) throw new Error('review_manifest_mismatch');
   if (!isCustomerReleaseQualified(audit, baseQualification)) throw new Error('qualification_invalid');
   const roles = new Set(); const paths = new Set(); const locale = review.artifacts[0]?.locale;
@@ -158,17 +159,49 @@ async function runReviewed(options) {
     if (bytes.length !== artifact.bytes || sha256(bytes) !== artifact.sha256) throw new Error('review_artifact_invalid');
     if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('review_pdf_invalid');
     const { stdout } = await execFile('pdftotext', ['-layout', artifact.path, '-'], { maxBuffer: 4 * 1024 * 1024, timeout: 30_000 }).catch(() => { throw new Error('review_pdf_invalid'); });
-    const countPattern = new RegExp(`\\b${review.customerObservationCount}\\s+${locale === 'de' ? 'SEO-Befunde?' : 'SEO findings?'}\\b`, 'u');
-    if (!countPattern.test(stdout)) throw new Error('review_pdf_content_invalid');
+    const countPattern = new RegExp(`\\b${review.customerObservationCount}\\s+${locale === 'de' ? 'Prüfbeobachtung(?:en)?' : 'check observations?'}\\b`, 'u');
+    const headingIndex = stdout.search(locale === 'de' ? /Wichtige Beobachtungen|Keine ausgewählten Schwerpunkte/u : /Key observations|No selected priorities/u);
+    if (headingIndex < 0 || !countPattern.test(stdout.slice(0, headingIndex))) throw new Error('review_pdf_content_invalid');
+    // The raw extraction follows the renderer's card order, avoiding A4
+    // column interleaving in layout extraction. Each field must be in its card.
+    const { stdout: rawText } = await execFile('pdftotext', ['-raw', artifact.path, '-'], { maxBuffer: 4 * 1024 * 1024, timeout: 30_000 }).catch(() => { throw new Error('review_pdf_invalid'); });
+    const normalize = value => String(value ?? '').replace(/\s+/gu, ' ').trim();
+    const normalized = normalize(rawText);
+    if (!Array.isArray(review.selectedTopics)) throw new Error('review_manifest_invalid');
+    const cardHeading = locale === 'de' ? 'Wichtige Beobachtungen' : 'Key observations';
+    const cardsStart = normalized.indexOf(cardHeading);
+    const footerStart = normalized.indexOf(locale === 'de' ? 'Lassen Sie uns sprechen' : 'Let’s get in touch', cardsStart + cardHeading.length);
+    if (review.selectedTopics.length && (cardsStart < 0 || footerStart < 0)) throw new Error('review_pdf_content_invalid');
+    let from = cardsStart + cardHeading.length; let priorTitleStart = from;
+    for (let index = 0; index < review.selectedTopics.length; index++) {
+      const topic = review.selectedTopics[index];
+      const title = normalize(topic.title), why = normalize(topic.explanation), action = normalize(topic.nextStep);
+      if (!title || !why || !action) throw new Error('review_pdf_content_invalid');
+      const start = normalized.indexOf(title, from);
+      const nextTitle = normalize(review.selectedTopics[index + 1]?.title);
+      const end = nextTitle ? normalized.indexOf(nextTitle, start + title.length) : footerStart;
+      if (start < 0 || end < 0 || end <= start || !normalize(topic.pageLabel) || !normalized.slice(priorTitleStart, start).trimEnd().endsWith(normalize(topic.pageLabel))) throw new Error('review_pdf_content_invalid');
+      priorTitleStart = start;
+      const card = normalized.slice(start, end);
+      if (![why, action, ...(topic.observed ? [normalize(topic.observed)] : [])].every(value => value && card.includes(value))) throw new Error('review_pdf_content_invalid');
+      const example = topic.urls?.[0];
+      if (example && !card.includes(normalize(`${locale === 'de' ? 'Beispielseite' : 'Example page'}: ${customerPageLabel(example.url, locale)}`))) throw new Error('review_pdf_content_invalid');
+      from = end;
+    }
+
+    const { stdout: xml } = await execFile('pdftohtml', ['-xml', '-stdout', '-hidden', artifact.path], { maxBuffer: 8 * 1024 * 1024, timeout: 30_000 }).catch(() => { throw new Error('review_pdf_invalid'); });
+    if (!cardLinksMatch(xml, review.selectedTopics, locale, customerPageLabel)) throw new Error('review_pdf_content_invalid');
     const { stdout: urls } = await execFile('pdfinfo', ['-url', artifact.path], { maxBuffer: 1 * 1024 * 1024, timeout: 30_000 }).catch(() => { throw new Error('review_pdf_invalid'); });
     const annotatedHosts = [...urls.matchAll(/https?:\/\/[^\s)<>"']+/giu)].flatMap(match => {
       try { return [new URL(match[0]).hostname.toLowerCase()]; } catch { return []; }
     });
     if (!stdout.trim() || /\bHOLD\b/u.test(stdout) || !annotatedHosts.includes(host.toLowerCase())) throw new Error('review_pdf_content_invalid');
+    const annotationUrls = [...urls.matchAll(/https?:\/\/[^\s)<>"']+/giu)].flatMap(match => { try { return [new URL(match[0]).href]; } catch { return []; } });
+    for (const topic of review.selectedTopics) { const example = topic.urls?.[0]; if (example && !example.redacted && !annotationUrls.includes(new URL(example.url).href)) throw new Error('review_pdf_content_invalid'); }
     reviewedBytes.set(artifact.path, bytes);
   }
   const expectedReview = createCustomerReviewManifest(audit, locale, review.artifacts.map(artifact => ({ role: artifact.role, path: artifact.path, content: reviewedBytes.get(artifact.path) })));
-  if (review.rawFindingRecords !== expectedReview.rawFindingRecords || review.customerAffectedCapturedUrls !== expectedReview.customerAffectedCapturedUrls || review.evidenceTriageOmitted !== expectedReview.evidenceTriageOmitted || review.evidenceTriageLegend !== expectedReview.evidenceTriageLegend || JSON.stringify(review.evidenceTriage) !== JSON.stringify(expectedReview.evidenceTriage)) throw new Error('review_manifest_mismatch');
+  if (review.rawFindingRecords !== expectedReview.rawFindingRecords || review.customerAffectedCapturedUrls !== expectedReview.customerAffectedCapturedUrls || review.evidenceTriageOmitted !== expectedReview.evidenceTriageOmitted || review.evidenceTriageLegend !== expectedReview.evidenceTriageLegend || JSON.stringify(review.evidenceTriage) !== JSON.stringify(expectedReview.evidenceTriage) || JSON.stringify(review.selectedTopics) !== JSON.stringify(expectedReview.selectedTopics)) throw new Error('review_manifest_mismatch');
   if (review.observationAccounting !== undefined && JSON.stringify(review.observationAccounting) !== JSON.stringify({raw:observationScope(audit,audit.findings),admitted:observationScope(audit,customerPriorityProjection(audit,locale).countedFindings)})) throw new Error('review_manifest_mismatch');
   if (review.admittedEvidenceReferences !== undefined && (JSON.stringify(review.admittedEvidenceReferences) !== JSON.stringify(expectedReview.admittedEvidenceReferences) || review.admittedEvidenceReferencesOmitted !== expectedReview.admittedEvidenceReferencesOmitted)) throw new Error('review_manifest_mismatch');
   if ((review.scanCoverageStatus !== undefined || review.scanExecutionStatus !== undefined) && (review.scanCoverageStatus !== expectedReview.scanCoverageStatus || review.scanExecutionStatus !== expectedReview.scanExecutionStatus)) throw new Error('review_manifest_mismatch');
@@ -179,7 +212,7 @@ async function runReviewed(options) {
   ]);
   if (!auditNow.equals(auditBytes) || !qualificationNow.equals(qualificationBytes) || !reviewNow.equals(reviewBytes)
     || !isCustomerReleaseQualified(audit, baseQualification)) throw new Error('review_manifest_mismatch');
-  await restoreSavedMobileLabEvidence(audit, review.mobileLabEvidence);
+  await restoreSavedMobileLabEvidence(audit, review.mobileLabEvidence, review.mobileLabEvidence?.association ?? undefined);
   if (pageEvidenceBytes && !(await readPrivate(review.pageEvidencePath, AUDIT_LIMIT)).equals(pageEvidenceBytes)) throw new Error('review_manifest_mismatch');
   for (const artifact of review.artifacts) {
     const current = await readPrivate(artifact.path, 50_000_000);

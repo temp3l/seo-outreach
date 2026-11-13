@@ -42,5 +42,5 @@ await withPlaywrightPdfSession(async renderer=>{
  results.push({id:'current-source',a4:true,mobile:true,frozenStyles:true,threeBadges:true,footer:true});
  if(selfTest){let rejected=false;try{await renderer((await readFile(join(gold,'a4-en.html'),'utf8')).replace('background:#102d3a','background:#702d3a'));}catch(e){if(!(e instanceof Error)||!e.message.includes('frozen PDF design changed'))throw e;rejected=true;}results.push({id:'intentional-color-change',visualGuardRejected:rejected});if(!rejected)failed=true;}
 });
-await writeFile(join(out,'results.json'),JSON.stringify({design:manifest.design,sourceIntegrityRevision:'customer-pdf-v6-source-accuracy-20261113',results},null,2)+'\n');
+await writeFile(join(out,'results.json'),JSON.stringify({design:manifest.design,sourceIntegrityRevision:'customer-pdf-v6-source-accuracy-20261113-operator-coverage',results},null,2)+'\n');
 console.log(JSON.stringify({ok:!failed,directory:out,results}));if(failed)process.exitCode=1;

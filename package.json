@@ -55,12 +55,12 @@
   },
   "devDependencies": {
     "@types/node": "24.10.0",
-    "typescript": "5.9.3",
-    "parse5": "7.3.0"
+    "typescript": "5.9.3"
   },
   "packageManager": "pnpm@10.29.3",
   "dependencies": {
-    "@spora/webcrawl": "workspace:*"
+    "@spora/webcrawl": "workspace:*",
+    "parse5": "7.3.0"
   },
   "optionalDependencies": {
     "playwright": "1.64.1"

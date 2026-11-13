@@ -16,7 +16,7 @@ test('429 recovery, exhaustion, zero, long Retry-After and budget boundaries',as
  const controller=new AbortController();controller.abort();
  await assert.rejects(safeGet('https://fixture.example/',{...base,signal:controller.signal,request:async()=>{throw Error('must not dispatch');}}));
 });
-test('customer summaries preserve up to six supported topics but booleans never authorize release',()=>{
+test('customer summaries omit unsupported image evidence and booleans never authorize release',()=>{
  const {audit}=createEvidenceFixture(3);const e=value=>({pageUrl:audit.target,source:'http',observedAt:audit.startedAt,value});
  audit.findings=[{code:'http_status_error',category:'indexability',observed:'HTTP 429 and missing pages',evidence:[e(429),e(404),e(410)]},{code:'multiple_h1',category:'content',observed:'document H1',evidence:[e(3)]}];
  const before=JSON.stringify(audit);
@@ -30,7 +30,7 @@ test('customer summaries preserve up to six supported topics but booleans never 
  for(const count of [0,1,2,3,4,5,6,7]) for(const locale of ['en','de']) {
   audit.findings=eligible.slice(0,count);
   const html=renderCustomerSummaryHtml(audit,locale,{issuer,clientReady:true});
-  assert.equal((html.match(/<article class="card">/g)??[]).length,[0,1,2,3,4,4,5,5][count]);
+  assert.equal((html.match(/<article class="card">/g)??[]).length,[0,1,2,2,3,3,4,4][count]);
   assert.match(html,/data-publication-status="HOLD"/u);
   assert.doesNotMatch(html,/data-publication-status="CLIENT_READY"/u);
  }

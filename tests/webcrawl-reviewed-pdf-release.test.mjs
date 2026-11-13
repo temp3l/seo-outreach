@@ -9,6 +9,7 @@ import { createEvidenceFixture } from './fixtures/evidence-pack-fixture.mjs';
 import { auditResultSha256 } from '../dist/reports/qualification.js';
 import { createPageDataExport } from '@spora/webcrawl/analysis/page-data';
 import { createCustomerReviewManifest } from '../dist/reports/review.js';
+import { customerPageLabel } from '../dist/reports/customer.js';
 
 const exec = promisify(execFile);
 const script = new URL('../scripts/compat/release-customer-reports.mjs', import.meta.url).pathname;
@@ -33,8 +34,12 @@ async function setup(root) {
   await writeFile(files.qualification, JSON.stringify(qualification), { mode: 0o600 });
   await writeFile(a4, pdf1, { mode: 0o600 }); await writeFile(mobile, pdf2, { mode: 0o600 });
   const bin = join(root, 'bin'); await mkdir(bin, { mode: 0o700 });
-  await writeFile(join(bin, 'pdftotext'), '#!/bin/sh\nprintf "Synthetic report fixture.example 1 SEO finding clean text\\n"\n', { mode: 0o700 });
-  await writeFile(join(bin, 'pdfinfo'), '#!/bin/sh\nprintf "https://fixture.example/\\n"\n', { mode: 0o700 });
+  const extracted = `Synthetic report fixture.example 1 check observation Key observations ${review.selectedTopics.map(t=>[t.pageLabel,t.title,t.urls?.[0] ? `Example page: ${customerPageLabel(t.urls[0].url,'en')}` : '',t.observed,t.explanation,t.nextStep].filter(Boolean).join(' ')).join(' ')} Let’s get in touch`;
+  await writeFile(join(bin, 'pdftotext'), `#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(extracted)});\n`, { mode: 0o700 });
+  const escapeXml = v => String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('\"','&quot;');
+  const xml = `<pdf2xml><page><text>Key observations</text>${review.selectedTopics.map(t=>`<text>${escapeXml(t.title)}</text>${t.urls?.[0] && !t.urls[0].redacted ? `<text>Example page: <a href=\"${escapeXml(t.urls[0].url)}\">${escapeXml(customerPageLabel(t.urls[0].url,'en'))}</a></text>` : ''}`).join('')}<text>Let’s get in touch</text></page></pdf2xml>`;
+  await writeFile(join(bin, 'pdftohtml'), `#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(xml)});\n`, { mode: 0o700 });
+  await writeFile(join(bin, 'pdfinfo'), `#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(['https://fixture.example/',...review.selectedTopics.flatMap(t=>t.urls?.[0]&&!t.urls[0].redacted?[t.urls[0].url]:[])].join('\n'))});\n`, { mode: 0o700 });
   return { files, review, a4, mobile, bin, audit };
 }
 
@@ -69,7 +74,7 @@ test('promotes exact reviewed PDF bytes and replays deterministically without re
 });
 
 test('fails closed for mismatched review hash, changed PDF, missing or unsafe qualification, and unsafe PDF mode', async () => {
-  for (const mode of ['wrong-hash', 'changed-pdf', 'missing-qualification', 'unsafe-mode', 'audit-mismatch', 'security-failed', 'audit-file-digest', 'triage-tamper']) {
+  for (const mode of ['wrong-hash', 'changed-pdf', 'missing-qualification', 'unsafe-mode', 'audit-mismatch', 'security-failed', 'audit-file-digest', 'triage-tamper', 'selected-topic-tamper']) {
     const root = await mkdtemp('/tmp/webcrawl-reviewed-pdf-negative-'); await chmod(root, 0o700);
     try {
       const data = await setup(root);
@@ -85,6 +90,7 @@ test('fails closed for mismatched review hash, changed PDF, missing or unsafe qu
       if (mode === 'changed-pdf') await writeFile(data.a4, '%PDF-1.4 changed\n', { mode: 0o600 });
       if (mode === 'audit-file-digest') {const review={...data.review,sourceAuditFileSha256:'0'.repeat(64)};const bytes=Buffer.from(JSON.stringify(review));await writeFile(data.files.review,bytes,{mode:0o600});await writeFile(data.files.qualification,JSON.stringify(qualification(data.audit,bytes)),{mode:0o600});}
       if (mode === 'triage-tamper') {const review={...data.review,evidenceTriage:[{findingIndex:0,evidenceClassification:'eligible',inCount:true}]};const bytes=Buffer.from(JSON.stringify(review));await writeFile(data.files.review,bytes,{mode:0o600});await writeFile(data.files.qualification,JSON.stringify(qualification(data.audit,bytes)),{mode:0o600});}
+      if (mode === 'selected-topic-tamper') {const review={...data.review,selectedTopics:[{...data.review.selectedTopics[0],findingCodes:[]}]};const bytes=Buffer.from(JSON.stringify(review));await writeFile(data.files.review,bytes,{mode:0o600});await writeFile(data.files.qualification,JSON.stringify(qualification(data.audit,bytes)),{mode:0o600});}
       if (mode === 'missing-qualification') await rm(data.files.qualification);
       if (mode === 'unsafe-mode') await chmod(data.mobile, 0o644);
       await assert.rejects(exec(process.execPath, [script, ...options(data.files, join(root, 'release'))], { env: { ...process.env, PATH: `${data.bin}:${process.env.PATH}` } }));
@@ -142,4 +148,34 @@ test('reviewed release binds page evidence and rejects changed evidence', async 
     await assert.rejects(exec(process.execPath,[script,...options({audit:data.files.audit,qualification:data.files.qualification,review:reviewPath},join(root,'tampered'))]),e=>/review_manifest_mismatch/u.test(e.stderr));
     await assert.rejects(readFile(join(root,'tampered.release.json')),{code:'ENOENT'});
   } finally { await rm(root,{recursive:true,force:true}); }
+});
+
+test('release rejects missing card fields and an incidental count after the summary', async () => {
+ for (const field of ['title','pageLabel','explanation','nextStep','observed','badge']) {
+  const root=await mkdtemp('/tmp/webcrawl-card-content-'); await chmod(root,0o700);
+  try {
+   const data=await setup(root), t=data.review.selectedTopics[0];
+   const fields=[t.pageLabel,t.title,t.urls?.[0] ? `Example page: ${customerPageLabel(t.urls[0].url,'en')}` : '',t.observed,t.explanation,t.nextStep].filter(Boolean);
+   if(field==='observed' && !t.observed) continue;
+   const text=`Synthetic fixture.example ${field==='badge'?'0 check observations':'1 check observation'} Key observations ${fields.filter(x=>x!==t[field]).join(' ')} ${field==='badge'?'1 check observation':''} Let’s get in touch`;
+   await writeFile(join(data.bin,'pdftotext'),`#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(text)});\n`,{mode:0o700});
+   await assert.rejects(exec(process.execPath,[script,...options(data.files,join(root,'out'))],{env:{...process.env,PATH:`${data.bin}:${process.env.PATH}`}}),e=>/review_pdf_content_invalid/u.test(e.stderr),field);
+  } finally { await rm(root,{recursive:true,force:true}); }
+ }
+});
+
+test('a repeated label inside the previous card cannot replace the next card label',async()=>{
+ const root=await mkdtemp('/tmp/webcrawl-card-label-');await chmod(root,0o700);
+ try{
+  const data=await setup(root),audit=data.audit;
+  audit.findings.push({code:'missing_canonical',category:'metadata',observed:'Synthetic',severity:'medium',evidence:[{pageUrl:audit.target,source:'http',observedAt:audit.completedAt}]});
+  audit.coverage.findings={records:2,checkCodes:2,affectedPages:1,evidenceOccurrences:2,byCheck:['missing_canonical','missing_meta_description'].map(code=>({code,records:1,affectedPages:1,evidenceOccurrences:1}))};
+  const auditBytes=Buffer.from(JSON.stringify(audit));await writeFile(data.files.audit,auditBytes,{mode:0o600});
+  const review={...createCustomerReviewManifest(audit,'en',[{role:'a4',path:data.a4,content:await readFile(data.a4)},{role:'mobile',path:data.mobile,content:await readFile(data.mobile)}]),sourceAuditFileSha256:digest(auditBytes)};assert.equal(review.selectedTopics.length,2);
+  const reviewBytes=Buffer.from(JSON.stringify(review));await writeFile(data.files.review,reviewBytes,{mode:0o600});await writeFile(data.files.qualification,JSON.stringify(qualification(audit,reviewBytes)),{mode:0o600});
+  const [a,b]=review.selectedTopics,parts=t=>[t.title,t.urls?.[0]?`Example page: ${customerPageLabel(t.urls[0].url,'en')}`:'',t.observed,t.explanation,t.nextStep].filter(Boolean).join(' ');
+  const text=`Synthetic fixture.example ${review.customerObservationCount} check observations Key observations ${a.pageLabel} ${parts(a)} ${b.pageLabel} unrelated trailing words ${parts(b)} Let’s get in touch`;
+  await writeFile(join(data.bin,'pdftotext'),`#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(text)});\n`,{mode:0o700});
+  await assert.rejects(exec(process.execPath,[script,...options(data.files,join(root,'out'))],{env:{...process.env,PATH:`${data.bin}:${process.env.PATH}`}}),e=>/review_pdf_content_invalid/u.test(e.stderr));
+ }finally{await rm(root,{recursive:true,force:true});}
 });

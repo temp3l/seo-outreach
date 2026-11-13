@@ -5,7 +5,7 @@ import { customerBriefing } from './customer.js';
 import { portugueseCustomerBriefing } from './customer-pt.js';
 import type { ReportContact } from './report-contact.js';
 import { reportPageReferences, type ReportPageReference } from './references.js';
-import { hasIncompleteCrawl } from '@spora/webcrawl/evidence';
+import { classifyScanCompletion } from '@spora/webcrawl/core/scan-completion';
 import type { CustomerReleaseQualification } from './qualification.js';
 export type { ReportContact } from './report-contact.js';
 
@@ -177,14 +177,17 @@ function operatorSecurityCoverage(result: AuditResult, locale: SummaryLocale): s
 export function renderOperatorStatusHtml(result: AuditResult, locale: SummaryLocale = 'de'): string {
   const groups = findingGroups(result).sort((a, b) => b.pages.length - a.pages.length || a.code.localeCompare(b.code));
   const date = dateLabel(result.startedAt, locale);
-  const partial = hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls) || result.crawl.limitations.includes('content_inspection_incomplete');
-  const state = locale === 'de' ? partial ? 'Crawl unvollständig' : 'Crawl abgeschlossen' : partial ? 'Crawl incomplete' : 'Crawl complete';
+  const completion = classifyScanCompletion(result);
+  const partial = completion.executionStatus !== 'COMPLETED';
+  const contentGap = completion.coverageStatus === 'PARTIAL';
+  const state = locale === 'de' ? ({COMPLETED:'Crawl abgeschlossen',INCOMPLETE:'Crawl unvollständig',FAILED:'Crawl unvollständig (Startseite fehlgeschlagen)',UNKNOWN:'Crawl-Status unbekannt'} as const)[completion.executionStatus] : ({COMPLETED:'Crawl complete',INCOMPLETE:'Crawl incomplete',FAILED:'Crawl incomplete (seed failed)',UNKNOWN:'Crawl status unknown'} as const)[completion.executionStatus];
   const counts = reportEvidenceCounts(result);
   const coverageText = locale === 'de'
     ? `${result.crawl.captured} erfasste Antworten (${counts.successfulResponses ?? 'UNBEKANNT'} erfolgreiche Antworten; abgeschlossene HTML-Analysen: ${counts.analyzedHtmlPages ?? 'UNBEKANNT'}) aus ${result.crawl.discovered} entdeckten URLs · ${result.crawl.failed} fehlgeschlagen · ${result.crawl.unattempted} nicht versucht · Seitenlimit ${result.crawlSettings.policy.maxPages}.`
     : `${result.crawl.captured} captured responses (${counts.successfulResponses ?? 'UNKNOWN'} successful responses; completed HTML analyses: ${counts.analyzedHtmlPages ?? 'UNKNOWN'}) from ${result.crawl.discovered} discovered URLs · ${result.crawl.failed} failed · ${result.crawl.unattempted} unattempted · page limit ${result.crawlSettings.policy.maxPages}.`;
   const finish = partial
-    ? (locale === 'de' ? 'Crawl mit Lücken abgeschlossen; ausgewiesene Prüfungsumfänge beachten.' : 'Crawl finished with gaps; review the recorded scope and check coverage statuses.')
+    ? (locale === 'de' ? 'Erfassungsstatus und ausgewiesene Prüfungsumfänge beachten.' : 'Review the recorded crawl status and check coverage.')
+    : contentGap ? (locale === 'de' ? 'Crawl abgeschlossen; einige Seiteninhalte wurden nicht untersucht. Prüfungsumfang separat beachten.' : 'Crawl finished; some page content was not analyzed. Review check coverage separately.')
     : (locale === 'de' ? 'Crawl abgeschlossen; Umfang und Status einzelner Prüfungen separat beachten.' : 'Crawl finished; review individual check coverage separately.');
   const notRun = result.capabilities.technology === 'disabled'
     ? (locale === 'de' ? 'Technologie-Erkennung nicht ausgeführt' : 'Technology detection not run')

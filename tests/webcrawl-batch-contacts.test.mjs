@@ -31,9 +31,9 @@ test('batch PageSpeed is enabled by default and opt-out has a distinct resumable
   const originalFetch = globalThis.fetch;
   const originalApiKey = process.env.PAGESPEED_API_KEY;
   let pageSpeedCalls = 0;
-  globalThis.fetch = async () => { pageSpeedCalls++; return Response.json({ lighthouseResult: { categories: Object.fromEntries(['performance', 'accessibility', 'best-practices', 'seo'].map((key) => [key, { score: .8 }])) } }); };
+  globalThis.fetch = async url => { pageSpeedCalls++; const target=new URL(url).searchParams.get('url'); return Response.json({ lighthouseResult: { requestedUrl:target,finalUrl:target,fetchTime:new Date().toISOString(),configSettings:{formFactor:'mobile'},categories: Object.fromEntries(['performance', 'accessibility', 'best-practices', 'seo'].map((key) => [key, { score: .8 }])) } }); };
   let requests = 0;
-  const transport = { resolveAddresses: async () => ['93.184.216.34'], request: async () => { requests++; return { status: 404, headers: {}, body: Buffer.alloc(0) }; } };
+  const transport = { resolveAddresses: async () => ['93.184.216.34'], request: async url => { requests++; const ok=url.pathname==='/'; return { status:ok?200:404, headers:{'content-type':ok?'text/html':'text/plain'}, body:Buffer.from(ok?'<html><h1>Fixture</h1></html>':'missing') }; } };
   try {
     delete process.env.PAGESPEED_API_KEY;
     const inputPath = join(root, 'sites.csv'), output = join(root, 'out');

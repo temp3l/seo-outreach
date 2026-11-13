@@ -269,7 +269,7 @@ test('PageSpeed adapter keeps API credentials out of the URL and projects scores
   const enrichment = createPageSpeedEnrichment({ apiKey: 'secret-key', fetch: async (input, init) => {
     requestUrl = String(input);
     requestKey = new Headers(init?.headers).get('x-goog-api-key') ?? '';
-    return new Response(JSON.stringify({ lighthouseResult: { categories: { performance: { score: 0.91 } } } }), { status: 200 });
+    return new Response(JSON.stringify({ lighthouseResult: { requestedUrl: 'https://example.com/', finalUrl: 'https://example.com/', fetchTime: new Date().toISOString(), configSettings: { formFactor: 'mobile' }, categories: { performance: { score: 0.91 } } } }), { status: 200 });
   } });
   const result = await enrichment.run({ target: 'https://example.com/', capturedAt: '2026-01-01T00:00:00.000Z', pages: [] });
   assert.equal(new URL(requestUrl).searchParams.has('key'), false);

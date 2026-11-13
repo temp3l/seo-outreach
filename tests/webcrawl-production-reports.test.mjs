@@ -15,7 +15,7 @@ async function fixture(enrichments = []) {
     },
     resolveAddresses: async () => ['93.184.216.34'],
     request: async (url) => url.pathname === '/'
-      ? { status: 200, headers: { 'content-type': 'text/html' }, body: Buffer.from('<title>Fixture</title><meta name="description" content="Fixture"><h1>Fixture</h1>') }
+      ? { status: 200, headers: { 'content-type': 'text/html' }, body: Buffer.from('<title>Fixture</title><h1>Fixture</h1>') }
       : { status: 404, headers: { 'content-type': 'text/plain' }, body: Buffer.from('missing') },
   }, enrichments);
 }
@@ -43,23 +43,24 @@ const assertSnapshot = (html, value, label, locale) => {
 assert.equal(audit.capabilities.pagespeed, 'disabled');
 const english = renderCustomerSummaryHtml(audit, 'en');
 const german = renderCustomerSummaryHtml(audit, 'de');
-assert.match(english, /Not run for this audit\./u);
-assert.match(german, /Für diesen Lauf nicht durchgeführt\./u);
+assert.match(english, /Mobile performance was not measured in this run\./u);
+assert.match(german, /Die mobile Leistung wurde in diesem Lauf nicht gemessen\./u);
 assert.doesNotMatch(english, /Scores could not be retrieved/u);
 assert.doesNotMatch(english, /stephan rebien|stephanrebien@gmail\.com|\+49 170/u);
-assert.match(english, /captured response/u);
+assert.match(english, /check observation/u);
 assert.match(renderOperatorStatusHtml(audit, 'en'), /Crawl complete/u);
 const singular = structuredClone(audit);
 singular.findings = [{ code: 'missing_h1', category: 'content', observed: 'Missing H1', evidence: [{ pageUrl: singular.target, observedAt: singular.startedAt, source: 'http' }] }];
-for (const [locale, labels] of [['en', ['captured response', 'topic to review</div>', '1 page to review']], ['de', ['erfasste Antwort', 'Thema zum Prüfen</div>', '1 Seite prüfen']]]) {
+for (const [locale, labels] of [['en', ['page', 'topic</div>', '1 page to review']], ['de', ['Seite', 'Thema</div>', '1 Seite prüfen']]]) {
   const html = renderCustomerSummaryHtml(singular, locale);
   assertSnapshot(html, 1, labels[0], locale);
   assert.ok(html.includes(labels[1]), `${locale} singular priority label`);
   assert.ok(html.includes(labels[2]), `${locale} singular evidence count`);
 }
 singular.crawl.captured = 2;
-assertSnapshot(renderCustomerSummaryHtml(singular, 'en'), 2, 'captured responses', 'en');
-assertSnapshot(renderCustomerSummaryHtml(singular, 'de'), 2, 'erfasste Antworten', 'de');
+singular.coverage.urls.push({url:'https://fixture.example/lessons/',finalUrl:'https://fixture.example/lessons/',outcome:'captured',statusCode:200});
+assertSnapshot(renderCustomerSummaryHtml(singular, 'en'), 2, 'pages', 'en');
+assertSnapshot(renderCustomerSummaryHtml(singular, 'de'), 2, 'Seiten', 'de');
 const completeStaticRun = structuredClone(audit);
 completeStaticRun.capabilities = Object.fromEntries(Object.keys(completeStaticRun.capabilities).map((name) => [name, 'complete']));
 assert.match(renderOperatorStatusHtml(completeStaticRun, 'en'), /Crawl complete/u, 'optional check statuses do not determine page crawl completion');
@@ -89,16 +90,19 @@ try {
         width: pages[0].getBoundingClientRect().width,
         footers: document.querySelectorAll('footer.issuer').length,
         smallest: Math.min(...[...document.querySelectorAll('p,li,a,footer')].map(e=>parseFloat(getComputedStyle(e).fontSize))),
-        footerOverlap: pages.some(p => {const foot=p.querySelector('footer');const prev=foot.previousElementSibling;return prev && foot.getBoundingClientRect().top < prev.getBoundingClientRect().bottom;})
+        footerOverlap: pages.some(p => {const foot=p.querySelector('footer');const prev=foot?.previousElementSibling;return foot && prev && foot.getBoundingClientRect().top < prev.getBoundingClientRect().bottom;})
       };
     });
-    assert.equal(layout.footers, layout.pages);
+    assert.equal(layout.footers, 1);
     assert.ok(layout.heights.every(h => h <= 297 * 96 / 25.4 + 1), `${locale} content must fit each physical PDF page: ${layout.heights}`);
     assert.ok(Math.abs(layout.width - 210 * 96 / 25.4) < 1, 'PDF uses A4 width');
     assert.ok(layout.smallest >= 12, 'essential notes must be at least 9pt');
     assert.equal(layout.footerOverlap, false);
     await page.emulateMedia({media:'screen'});
+    // The A4 HTML is not the mobile-PDF renderer; check its desktop viewport here.
+    await page.setViewportSize({width:1000,height:844});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth), true);
+    await page.setViewportSize({width:390,height:844});
   }
   for (const [locale, html] of [['en', renderOperatorStatusHtml(audit, 'en')], ['de', renderOperatorStatusHtml(audit, 'de')]]) {
     await page.setContent(html, { waitUntil: 'load' });

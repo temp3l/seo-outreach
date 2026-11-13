@@ -47,7 +47,7 @@ export function prepareCustomerEvidenceTriage(result: AuditResult, data?: PageDa
   if (finding.evidence.some((e,i) => e.source !== 'http' || pages[i]?.source !== 'http_html' || !Number.isFinite(Date.parse(e.observedAt)) || Date.parse(e.observedAt)<Date.parse(pages[i]!.fetchedAt) || Date.parse(e.observedAt)>end || finding.code.startsWith('duplicate_') && e.observedAt!==pages[i]!.fetchedAt)) return 'review';
   if (['image_alt_missing_or_empty','images_missing_alt','missing_image_alt'].includes(finding.code)) {
     return pages.every((page, index) => imagesFor(page!).some(image => {
-      if (image.controlContext?.nameEvidence !== 'none' || !['link','button'].includes(image.controlContext.kind)) return false;
+      if (image.controlContext?.nameEvidence !== 'none' || image.controlContext.kind !== 'link') return false;
       if (finding.code === 'image_alt_missing_or_empty' ? !['missing','empty'].includes(image.altStatus) : image.altStatus !== 'missing') return false;
       const observed = finding.evidence[index]!.imageObservations;
       // Retained per-image observations must match this occurrence and state;

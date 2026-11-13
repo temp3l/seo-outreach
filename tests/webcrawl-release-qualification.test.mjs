@@ -301,10 +301,10 @@ test('scoped report release records crawl/check gaps and omits an unsupported un
   for(const locale of ['en','de']) {
     const html=renderCustomerSummaryHtml(audit,locale,{issuer,qualification:qualification(audit)});
     assert.match(html,/data-publication-status="HOLD"/);
-    assert.doesNotMatch(html,/data-scope-disclosure="true"|Based on captured pages|Basierend auf erfassten Seiten/);
+    assert.match(html,/Based on captured pages|Basierend auf erfassten Seiten/);
     assert.doesNotMatch(html,/data-issue-code="missing_h1"/);
     const mobile=await renderMobileCustomerPdf(audit,async html=>Buffer.from(html),issuer,locale,'CLIENT_READY',qualification(audit));
-    assert.doesNotMatch(decode(mobile),/data-scope-disclosure="true"|Based on captured pages|Basierend auf erfassten Seiten/);
+    assert.match(decode(mobile),/Based on captured pages|Basierend auf erfassten Seiten/);
   }
   assert.equal(isCustomerReleaseQualified(audit,{...qualification(audit),auditSha256:'0'.repeat(64)}),false);
   audit.findings=audit.findings.filter(f=>f.code==='missing_h1');recount(audit);

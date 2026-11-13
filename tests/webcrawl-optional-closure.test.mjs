@@ -163,13 +163,13 @@ test('adapter requirements bound inputs, declare source, avoid target-only HTML 
   const timeout=await auditWebsite(base,[stalled]);
   assert.equal(timeout.capabilities.stalled,'failed'); assert.equal(timeout.enrichmentLimitations.stalled,'enrichment_timeout');
   let calls=0;
-  const psi=createPageSpeedEnrichment({fetch:async()=>{calls++;return Response.json({lighthouseResult:{categories:Object.fromEntries(['performance','accessibility','best-practices','seo'].map(k=>[k,{score:1}]))}});}});
+  const psi=createPageSpeedEnrichment({fetch:async()=>{calls++;return Response.json({lighthouseResult:{requestedUrl:input.url,finalUrl:input.url,fetchTime:new Date().toISOString(),configSettings:{formFactor:'mobile'},categories:Object.fromEntries(['performance','accessibility','best-practices','seo'].map(k=>[k,{score:1}]))}});}});
   const psiResult=await auditWebsite({...base,pagespeed:true,retainHtml:false},[psi]);
   assert.equal(psiResult.crawlSettings.retainHtml,false); assert.equal(psiResult.capabilities.pagespeed,'complete'); assert.equal(calls,1);
 });
 test('PageSpeed runs by default for library audits and pagespeed false is an explicit opt-out',async()=>{
   const originalFetch=globalThis.fetch; let calls=0;
-  globalThis.fetch=async url=>{calls++;assert.equal(new URL(url).hostname,'pagespeedonline.googleapis.com');return Response.json({lighthouseResult:{categories:Object.fromEntries(['performance','accessibility','best-practices','seo'].map(k=>[k,{score:.9}]))}});};
+  globalThis.fetch=async url=>{calls++;assert.equal(new URL(url).hostname,'pagespeedonline.googleapis.com');return Response.json({lighthouseResult:{requestedUrl:input.url,finalUrl:input.url,fetchTime:new Date().toISOString(),configSettings:{formFactor:'mobile'},categories:Object.fromEntries(['performance','accessibility','best-practices','seo'].map(k=>[k,{score:.9}]))}});};
   try {
     const base={startUrl:input.url,policy:{...policy,maxPages:1},...transport(),pagespeed:false};
     const enabled=await auditWebsite({...base,pagespeed:true});
@@ -188,7 +188,7 @@ test('PageSpeed runs by default for library audits and pagespeed false is an exp
     assert.equal(privateTarget.enrichmentLimitations.pagespeed,'pagespeed_query_requires_explicit_opt_in');
     assert.equal(calls,1);
     const directCalls=[];
-    const direct=createPageSpeedEnrichment({fetch:async url=>{directCalls.push(new URL(url).searchParams.get('url'));return Response.json({lighthouseResult:{categories:Object.fromEntries(['performance','accessibility','best-practices','seo'].map(k=>[k,{score:1}]))}});}});
+    const direct=createPageSpeedEnrichment({fetch:async url=>{directCalls.push(new URL(url).searchParams.get('url'));return Response.json({lighthouseResult:{requestedUrl:input.url,finalUrl:input.url,fetchTime:new Date().toISOString(),configSettings:{formFactor:'mobile'},categories:Object.fromEntries(['performance','accessibility','best-practices','seo'].map(k=>[k,{score:1}]))}});}});
     const directResult=await auditWebsite({...base,pagespeed:true,startUrl:input.url+'?source=campaign'},[direct]);
     assert.equal(directResult.capabilities.pagespeed,'unavailable');
     assert.equal(directResult.enrichmentLimitations.pagespeed,'pagespeed_query_requires_explicit_opt_in');

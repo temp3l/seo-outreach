@@ -5,14 +5,32 @@ import {customerPriorityProjection} from '../dist/reports/customer.js';
 import {countDeduplicatedIssues} from '../dist/reports/issue-counts.js';
 import {renderCustomerSummaryHtml} from '../dist/reports/summary.js';
 
+test('customer card page counts exclude source HTML truncated after capture',async()=>{
+ const {createPageDataExport}=await import('@spora/webcrawl/analysis/page-data');
+ const {auditResultSha256}=await import('../dist/reports/qualification.js');
+ const {withCustomerEvidence}=await import('../dist/reports/customer-evidence.js');
+ const {customerPriorityPageLabel}=await import('../dist/reports/customer.js');
+ const {audit}=createEvidenceFixture(5);
+ const urls=['/','/courses/','/contact/','/about/','/pricing/'].map(path=>`https://fixture.example${path}`);
+ audit.coverage.urls=urls.map(url=>({url,finalUrl:url,outcome:'captured',statusCode:200}));
+ audit.findings=[{code:'missing_h1',category:'content',observed:'Missing H1',evidence:urls.map(pageUrl=>({pageUrl,source:'http',observedAt:audit.startedAt}))}];
+ const pages=urls.map(requestedUrl=>({requestedUrl,finalUrl:requestedUrl,statusCode:200,contentType:'text/html',fetchedAt:audit.startedAt,responseBytes:100,html:'<html><body><p>Fixture</p></body></html>'}));
+ const exported=createPageDataExport(pages,{includeRawHtml:true});
+ const bound={...exported,pages:exported.pages.map((page,index)=>index===4?{...page,contentStatus:'content_limit',rawHtmlTruncated:true}:page),target:audit.target,auditStartedAt:audit.startedAt,auditCompletedAt:audit.completedAt,auditSha256:auditResultSha256(audit)};
+ const attached=withCustomerEvidence(audit,bound),projection=customerPriorityProjection(attached);
+ const selected=projection.selected.find(topic=>topic.code==='missing_h1');
+ assert.equal(selected?.urls.length,5);
+ assert.equal(customerPriorityPageLabel(attached,selected,projection.customerFindings,'en'),'4 pages to review');
+});
+
 test('pre-limit reportable checks omitted from cards remain described in customer output',()=>{
  const {audit}=createEvidenceFixture(1);audit.target=audit.coverage.urls[0].url;const page=audit.target;
  audit.findings=['invalid_canonical','meta_description_length','missing_meta_description','images_missing_dimensions','missing_h1','heading_hierarchy_skip','missing_canonical','image_file_too_large'].map(code=>({code,category:'metadata',severity:'low',observed:code,evidence:[{pageUrl:page,observedAt:audit.startedAt,source:'http'}]}));
  const p=customerPriorityProjection(audit),shown=new Set(p.selected.map(t=>t.code)),hidden=p.countedFindings.filter(f=>!shown.has(f.code));
  assert.ok(hidden.length);assert.equal(p.deduplicatedIssues,countDeduplicatedIssues(p.countedFindings));
- assert.ok(p.selected.some(t=>t.observed.includes('Also counted in overall SEO findings:')));
- const html=renderCustomerSummaryHtml(audit,'en');assert.match(html,/Also counted in overall SEO findings:/);assert.match(html,/check observations?/);
- const german=renderCustomerSummaryHtml(audit,'de');assert.match(german,/Ebenfalls in SEO-Befunden gezählt:/);
+ assert.ok(p.selected.some(t=>t.observed.includes('Also counted in overall check observations:')));
+ const html=renderCustomerSummaryHtml(audit,'en');assert.match(html,/Also counted in overall check observations:/);assert.match(html,/check observations?/);
+ const german=renderCustomerSummaryHtml(audit,'de');assert.match(german,/Ebenfalls in Prüfbeobachtungen gezählt:/);
 });
 
 
@@ -23,7 +41,7 @@ test('real repeated image-link aliases do not create an additional count disclos
  const audit=JSON.parse(await readFile(root+'/crawl.json'));const data=JSON.parse(gunzipSync(await readFile(root+'/crawl.page-data.json.gz'),{maxOutputLength:200000000}));
  const p=customerPriorityProjection(withCustomerEvidence(audit,data));
  assert.ok(p.selected.some(t=>t.code.includes('alt')));
- assert.ok(!p.selected.some(t=>/Also counted in overall SEO findings: Some image-only links/u.test(t.observed)));
+ assert.ok(!p.selected.some(t=>/Also counted in overall check observations: Some image-only links/u.test(t.observed)));
 });
 
 async function duplicateMetadataFixture(extra) {

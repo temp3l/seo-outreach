@@ -21,7 +21,8 @@ test('CLI PageSpeed protects query URLs by default and requires a separate query
   globalThis.fetch = async url => {
     const request = new URL(url);
     calls.push(request.searchParams.get('url'));
-    return Response.json({ lighthouseResult: { categories: Object.fromEntries(['performance', 'accessibility', 'best-practices', 'seo'].map(name => [name, { score: .9 }])) } });
+    const requestedUrl = request.searchParams.get('url');
+    return Response.json({ lighthouseResult: { requestedUrl, finalUrl: requestedUrl, fetchTime: new Date().toISOString(), configSettings: { formFactor: 'mobile' }, categories: Object.fromEntries(['performance', 'accessibility', 'best-practices', 'seo'].map(name => [name, { score: .9 }])) } });
   };
   try {
     const target = 'https://fixture.example/?campaign=private';
@@ -244,7 +245,8 @@ test('PageSpeed cancels HTTP errors and validates scores and outbound identity',
   assert.equal((await error.run(context)).status,'unavailable'); assert.equal(cancelled,true);
   assert.equal((await error.run({ ...context,target:'https://user:secret@fixture.example/' })).status,'failed');
   for (const [categories,status] of [[{},'unavailable'],[{seo:{score:0.8},performance:{score:2}},'partial'],[Object.fromEntries(['performance','accessibility','best-practices','seo'].map(name=>[name,{score:1}])),'complete']]) {
-    const adapter=createPageSpeedEnrichment({ includeQuery:true, fetch:async()=>Response.json({lighthouseResult:{categories}}) });
+    const requestedUrl='https://fixture.example/?meaningful=yes';
+    const adapter=createPageSpeedEnrichment({ includeQuery:true, fetch:async()=>Response.json({lighthouseResult:{requestedUrl,finalUrl:requestedUrl,fetchTime:new Date().toISOString(),configSettings:{formFactor:'mobile'},categories}}) });
     assert.equal((await adapter.run(context)).status,status);
   }
 });

@@ -4,6 +4,12 @@
 
 This v6 revision implements the user’s explicit request to center the summary badge group on A4 and mobile. Single-row fit, font sizes, copy, counts, card layout and final-page-only footer are preserved. The full previous contract and inputs are preserved in [the v5 archive](pdf-design-versions/customer-pdf-v5-20261106/README.md). The current reference PDFs and PNGs live in [tests/fixtures/report-golden](../tests/fixtures/report-golden).
 
+## Observation-unit source revision
+
+The 13 November 2026 source-accuracy revision uses “check observations” (German: “Prüfbeobachtungen”) for the existing deduplicated admitted-check count. The count definition and v6 geometry remain unchanged. The approved original PDFs, images and design lock remain authoritative for the frozen visual design. The separate source-integrity revision records this explicitly requested wording and the corresponding checker and test changes; it does not approve customer release or outbound outreach.
+
+The subsequent source-integrity revision separates completed crawl execution from partial content coverage in the internal operator status; it preserves the v6 customer presentation and approved references.
+
 ## Fixed presentation
 
 - A4 is 210 × 297 mm. Mobile is 108 × 280 mm.

@@ -22,7 +22,7 @@
     {
       "path": "src/reports/summary.ts",
       "kind": "file",
-      "sha256": "4c9c227b16feec69819ef6a07ab44161aa9c050e3d4314a1037c648fd767bedd"
+      "sha256": "d594cd76975e09d05704fab7d01f3013585d72e203f3d26a13b3222ecd170d0a"
     },
     {
       "path": "src/reports/pdf-playwright.ts",
@@ -37,12 +37,12 @@
     {
       "path": "scripts/check-report-visuals.mjs",
       "kind": "file",
-      "sha256": "b00102aee514e750a93cbd17c1f099fe696eab465ee46deb6cb624e05fc6ed32"
+      "sha256": "7228f6b27e3558573288b3ae6088e853b0a452cd7909b126b137623be676d380"
     },
     {
       "path": "tests/report-design-contract.test.mjs",
       "kind": "file",
-      "sha256": "5631d18550ab537d7de07a4ae945c75f253ebe5166e90d8f3fde8e950cb2094f"
+      "sha256": "03c4e8c17e4f1ba3ddd807190d854aa42f70170d79979456a9a6090b2856eab9"
     },
     {
       "path": "tests/report-design-visual.test.mjs",
@@ -202,7 +202,7 @@
     {
       "path": "scripts/check-report-design.mjs",
       "kind": "file",
-      "sha256": "ed05e7c50dfb591900761c9e5cc0c99a884544bef65ab12c8d367c470403bcec"
+      "sha256": "52d3da6c9ae2bdb68366eb7f998b2afcb469a81f2fc25797626b8f611f816a19"
     },
     {
       "path": "src/reports/issue-counts.ts",
@@ -212,7 +212,7 @@
     {
       "path": "tests/customer-issue-counts.test.mjs",
       "kind": "file",
-      "sha256": "4c65f18e84163cda75cae0cd9807a42496b2242e9001248b8a6edb839315ab98"
+      "sha256": "0e424b96c4c43218a3900d18b0516b8cf9e9d3e5f5da2bc9d9d3ed9b0e6febc2"
     },
     {
       "path": "tests/webcrawl-customer-pdf.test.mjs",
@@ -287,6 +287,6 @@
   ],
   "status": "SOURCE_REVISION_AUTHORIZED",
   "approvedAt": "2026-11-06T11:04:40.586160+00:00",
-  "sourceIntegrityRevision": "customer-pdf-v6-source-accuracy-20261113",
+  "sourceIntegrityRevision": "customer-pdf-v6-source-accuracy-20261113-operator-coverage",
   "sourceIntegrityAuthority": "User authorized a separate source-only integrity lock on 2026-11-13; original approved v6 lock and visual references remain unchanged. No report or outbound approval."
 }

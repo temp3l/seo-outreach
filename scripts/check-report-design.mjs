@@ -4,8 +4,8 @@ import {createHash} from 'node:crypto';
 import {dirname,resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const revision='customer-pdf-v6-source-accuracy-20261113';
-const allowed=new Set(['src/reports/summary.ts','src/reports/mobile.ts','scripts/check-report-design.mjs','scripts/check-report-visuals.mjs','tests/report-design-contract.test.mjs']);
+const revision='customer-pdf-v6-source-accuracy-20261113-operator-coverage';
+const allowed=new Set(['src/reports/summary.ts','src/reports/mobile.ts','scripts/check-report-design.mjs','scripts/check-report-visuals.mjs','tests/report-design-contract.test.mjs','tests/customer-issue-counts.test.mjs']);
 const added=new Set(['docs/pdf-design-approval.json','docs/pdf-design-versions/customer-pdf-v6-20261106/report-design.lock.json']);
 export async function verifyReportDesign(root=resolve(dirname(fileURLToPath(import.meta.url)),'..')) {
  const bytes=await readFile(join(root,'report-design.lock.json'));

@@ -5,19 +5,60 @@ import { createHash } from 'node:crypto';
 import type { AuditResult } from '@spora/webcrawl';
 import { readMobileLabLcp, type MobileLabLcp } from '@spora/webcrawl/enrichments/pagespeed-lab';
 import { isReportableEvidenceAdmissible } from './qualification.js';
+import { CUSTOMER_REPORT_FRESHNESS_MS } from './freshness.js';
 
-type LabEvidence = MobileLabLcp & Readonly<{ source: 'saved_psi_response' | 'audit_finding'; sha256?: string; path?: string }>;
+type LabEvidence = MobileLabLcp & Readonly<{ source: 'saved_psi_response' | 'audit_finding'; sha256?: string; path?: string; association?: PsiAssociation }>;
+export type PsiAssociation = Readonly<{
+  schema: 'psi-run-association-v1';
+  runId: string; siteId: string; captureManifestSha256: string; sourceCaptureSha256: string; captureCompletedAt: string;
+  auditSha256: string; requestedUrl: string; finalUrl: string; strategy: 'mobile';
+  categories: readonly ['performance', 'accessibility', 'best-practices', 'seo']; dispatchId: string;
+  requestedAt: string; completedAt: string; responseSha256: string; result: 'completed';
+}>;
+export type ExpectedPsiAssociation = Pick<PsiAssociation, 'runId'|'siteId'|'captureManifestSha256'|'sourceCaptureSha256'|'captureCompletedAt'|'auditSha256'|'requestedUrl'|'finalUrl'|'strategy'|'categories'|'dispatchId'|'requestedAt'|'completedAt'|'responseSha256'|'result'>;
 const saved = new WeakMap<AuditResult, LabEvidence>();
 const exactUrl = (a: string, b: string): boolean => { try { return new URL(a).href === new URL(b).href; } catch { return false; } };
+const digest = (value: string): boolean => /^[a-f0-9]{64}$/u.test(value);
+const timestamp = (value: string): number => typeof value === 'string' ? Date.parse(value) : Number.NaN;
+function validAssociation(value: unknown, expected: ExpectedPsiAssociation | undefined, result: AuditResult, bytes: Uint8Array, lab: MobileLabLcp): value is PsiAssociation {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !expected) return false;
+  const a = value as Partial<PsiAssociation>;
+  const captureCompletedAt = timestamp(a.captureCompletedAt ?? ''); const requestedAt = timestamp(a.requestedAt ?? ''); const completedAt = timestamp(a.completedAt ?? ''); const measured = timestamp(lab.fetchTime);
+  return a.schema === 'psi-run-association-v1' && typeof a.runId === 'string' && !!a.runId
+    && typeof a.siteId === 'string' && !!a.siteId && digest(a.captureManifestSha256 ?? '')
+    && Number.isFinite(captureCompletedAt) && captureCompletedAt === Date.parse(result.completedAt)
+    && Number.isFinite(Date.parse(result.startedAt)) && requestedAt >= Date.parse(result.startedAt) && requestedAt - Date.parse(result.startedAt) < CUSTOMER_REPORT_FRESHNESS_MS
+    && requestedAt >= captureCompletedAt && requestedAt - captureCompletedAt < CUSTOMER_REPORT_FRESHNESS_MS
+    && digest(a.sourceCaptureSha256 ?? '') && digest(a.auditSha256 ?? '')
+    && a.auditSha256 === createHash('sha256').update(JSON.stringify(result)).digest('hex')
+    && exactUrl(a.requestedUrl ?? '', result.target) && exactUrl(a.finalUrl ?? '', lab.finalUrl)
+    && a.strategy === 'mobile' && Array.isArray(a.categories)
+    && JSON.stringify(a.categories) === JSON.stringify(['performance','accessibility','best-practices','seo'])
+    && typeof a.dispatchId === 'string' && /^[0-9a-f-]{36}$/iu.test(a.dispatchId)
+    && Number.isFinite(requestedAt) && Number.isFinite(completedAt) && completedAt >= requestedAt
+    && Number.isFinite(measured) && measured >= requestedAt - 300_000 && measured <= completedAt + 300_000
+    && a.responseSha256 === createHash('sha256').update(bytes).digest('hex')
+    && a.result === 'completed'
+    && a.runId === expected.runId && a.siteId === expected.siteId
+    && a.captureManifestSha256 === expected.captureManifestSha256 && a.sourceCaptureSha256 === expected.sourceCaptureSha256
+    && a.captureCompletedAt === expected.captureCompletedAt
+    && a.auditSha256 === expected.auditSha256 && typeof a.requestedUrl === 'string' && exactUrl(a.requestedUrl, expected.requestedUrl)
+    && exactUrl(a.finalUrl ?? '', expected.finalUrl) && a.strategy === expected.strategy
+    && JSON.stringify(a.categories) === JSON.stringify(expected.categories) && a.dispatchId === expected.dispatchId
+    && a.requestedAt === expected.requestedAt && a.completedAt === expected.completedAt
+    && a.responseSha256 === expected.responseSha256 && a.result === expected.result;
+}
 /** Attach bounded corroborating lab evidence without rewriting the source audit or its identity. */
-export function withSavedMobileLabEvidence(result: AuditResult, bytes: Uint8Array, path?: string): AuditResult {
+export function withSavedMobileLabEvidence(result: AuditResult, bytes: Uint8Array, path?: string, association?: PsiAssociation, expected?: ExpectedPsiAssociation): AuditResult {
   saved.delete(result);
   if (bytes.byteLength > 16_000_000) throw Error('saved_psi_too_large');
   const lab = readMobileLabLcp(JSON.parse(Buffer.from(bytes).toString('utf8')));
   const measured = lab && Date.parse(lab.fetchTime);
-  const score = lab && result.findings.find(f => f.code === 'pagespeed_category_score' && /^performance score:/iu.test(f.observed) && f.evidence[0]?.value === lab.performanceScore && isReportableEvidenceAdmissible(result, f));
-  if (!lab || !score || !exactUrl(lab.requestedUrl, result.target) || !exactUrl(lab.finalUrl, result.target) || !Number.isFinite(measured) || measured! < Date.parse(result.startedAt) - 300_000 || measured! > Date.parse(result.completedAt) + 300_000 || Math.abs(measured! - Date.parse(score.evidence[0]!.observedAt)) > 300_000) throw Error('saved_psi_audit_mismatch');
-  saved.set(result, Object.freeze({ ...lab, source: 'saved_psi_response', sha256: createHash('sha256').update(bytes).digest('hex'), ...(path ? { path } : {}) }));
+  const duringCapture = Number.isFinite(measured) && measured! >= Date.parse(result.startedAt) - 300_000 && measured! <= Date.parse(result.completedAt) + 300_000;
+  const associatedPostCapture = !!lab && validAssociation(association, expected, result, bytes, lab);
+  const score = lab && result.findings.find(f => f.code === 'pagespeed_category_score' && /^performance score:/iu.test(f.observed) && f.evidence[0]?.value === lab.performanceScore && (associatedPostCapture && association ? isReportableEvidenceAdmissible(result, f, Date.parse(association.requestedAt), Date.parse(association.completedAt)) : isReportableEvidenceAdmissible(result, f)));
+  if (!lab || (!score && !associatedPostCapture) || !exactUrl(lab.requestedUrl, result.target) || !exactUrl(lab.finalUrl, result.target) || !Number.isFinite(measured) || (!duringCapture && !associatedPostCapture) || (association !== undefined && !associatedPostCapture) || (duringCapture && score && Math.abs(measured! - Date.parse(score.evidence[0]!.observedAt)) > 300_000)) throw Error('saved_psi_audit_mismatch');
+  saved.set(result, Object.freeze({ ...lab, source: 'saved_psi_response', sha256: createHash('sha256').update(bytes).digest('hex'), ...(path ? { path } : {}), ...(associatedPostCapture ? { association } : {}) }));
   return result;
 }
 export function mobileLcpEvidence(result: AuditResult): LabEvidence | undefined {
@@ -37,7 +78,7 @@ export function mobileLcpEvidence(result: AuditResult): LabEvidence | undefined 
 }
 
 /** Reproduce optional saved-response context during reviewed readback; no provider request. */
-export async function restoreSavedMobileLabEvidence(result: AuditResult, value: unknown): Promise<void> {
+export async function restoreSavedMobileLabEvidence(result: AuditResult, value: unknown, expected?: ExpectedPsiAssociation): Promise<void> {
   if (value === undefined || value === null) return;
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('review_mobile_lab_evidence_invalid');
   const evidence = value as Record<string, unknown>;
@@ -50,6 +91,6 @@ export async function restoreSavedMobileLabEvidence(result: AuditResult, value: 
   let bytes: Buffer;
   try { const stat = await file.stat(); if (!stat.isFile() || stat.size < 1 || stat.size > 16_000_000) throw Error('review_mobile_lab_evidence_invalid'); bytes = await file.readFile(); } finally { await file.close(); }
   if (createHash('sha256').update(bytes).digest('hex') !== evidence.sha256) throw Error('review_mobile_lab_evidence_changed');
-  withSavedMobileLabEvidence(result, bytes, evidence.path);
+  withSavedMobileLabEvidence(result, bytes, evidence.path, evidence.association as PsiAssociation | undefined, expected);
   if (JSON.stringify(mobileLcpEvidence(result)) !== JSON.stringify(evidence)) { saved.delete(result); throw Error('review_mobile_lab_evidence_mismatch'); }
 }

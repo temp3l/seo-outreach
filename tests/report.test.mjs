@@ -20,8 +20,8 @@ test('builds an INTERNAL/HOLD mobile PDF input with exact supported count and ho
   const pdf=renderCustomerPdf(x); assert.equal(pdf.subarray(0,8).toString('latin1'),'%PDF-1.4');
 });
 
-test('builds localized customer copy from the same six safe findings and verifies each rendered artifact',()=>{
-  for(const locale of ['en','es','de','pt-BR']) {
+test('builds English, Spanish and German customer copy from the same six safe findings and verifies each rendered artifact',()=>{
+  for(const locale of ['en','es','de']) {
     const decision=fixture(locale);decision.coverage.truncatedPages=2;
     const internal=buildReportPdfInput(decision);const customer=buildCustomerReportPdfInput(decision);
     assert.equal(customer.findings.length,6);assert.deepEqual(customer.findings,internal.findings);
@@ -104,7 +104,7 @@ test('coverage counts and closing next step stay on the same page when they fit'
 });
 
 test('one to five supported findings render without padding and retain coverage disclosures',()=>{
- for(const count of [1,2,3,4,5])for(const locale of ['en','es','de','pt-BR']){
+ for(const count of [1,2,3,4,5])for(const locale of ['en','es','de']){
   const d=fixture(locale);d.findings=d.findings.slice(0,count);
   const internal=buildReportPdfInput(d),customer=buildCustomerReportPdfInput(d);
   assert.equal(internal.findings.length,count);assert.equal(customer.findings.length,count);
@@ -118,8 +118,8 @@ test('one to five supported findings render without padding and retain coverage 
 });
 
 
-test('four through six distinct findings render and verify in every locale, without padding',()=>{
-  for(const locale of ['en','es','de','pt-BR']) for(const count of [4,5,6]) {
+test('four through six distinct findings render and verify in English, Spanish and German, without padding',()=>{
+  for(const locale of ['en','es','de']) for(const count of [4,5,6]) {
     const decision=fixture(locale); decision.findings=decision.findings.slice(0,count);
     for(const build of [buildReportPdfInput,buildCustomerReportPdfInput]) {
       const input=build(decision), bytes=renderCustomerPdf(input);

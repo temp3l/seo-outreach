@@ -26,7 +26,7 @@ test('customer badge counts admitted individual issues and excludes internal and
   const projection=customerPriorityProjection(audit,locale);assert.equal(projection.selected.length,1);assert.equal(projection.deduplicatedIssues,3);
   const html=renderCustomerSummaryHtml(audit,locale);
   assert.match(html,/data-summary="deduplicated-issues"><strong>3<\/strong>/);
-  assert.match(html,locale==='en'?/SEO findings/:/SEO-Befunde/);assert.doesNotMatch(html,/deduplicated issues|bereinigte Befunde/);
+  assert.match(html,locale==='en'?/check observations/:/Prüfbeobachtungen/);assert.doesNotMatch(html,/deduplicated issues|bereinigte Befunde/);
  }
 });
 

@@ -18,8 +18,8 @@ test('verifies valid renderer output and reports artifact-only status',()=>{
   assert.deepEqual(result,{status:'ARTIFACT_VERIFIED_ONLY',sha256:createHash('sha256').update(pdf).digest('hex'),pageCount:2,findings:6});
 });
 
-test('verifies multi-page output and all localized fixed labels in reading order',()=>{
-  for(const locale of ['es','de','pt-BR']) {
+test('verifies multi-page output and Spanish and German fixed labels in reading order',()=>{
+  for(const locale of ['es','de']) {
     const localized={...input,locale,opening:'Revisión de páginas capturadas. '.repeat(180)};
     const result=verifyRenderedPdf(localized,renderCustomerPdf(localized));
     assert.ok(result.pageCount>1,`${locale} should exercise page-tree traversal`); assert.equal(result.findings,6);

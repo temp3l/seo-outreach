@@ -25,3 +25,7 @@ runs/
 .DS_Store
 .idea/
 .vscode/
+# Temporary top-level validation work
+/.tmp/
+/tmp/
+/temp/

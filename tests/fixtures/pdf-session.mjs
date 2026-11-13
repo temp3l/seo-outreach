@@ -44,9 +44,9 @@ if (stage === 'cli' || stage === 'managed-cli') {
       resolveAddresses: async () => ['93.184.216.34'],
       request: async url => ({ status: url.pathname === '/' ? 200 : 404, headers: { 'content-type': url.pathname === '/' ? 'text/html' : 'text/plain' }, body: Buffer.from(url.pathname === '/' ? html : 'missing') }),
     });
-    assert.equal((await readdir(root)).filter(name => name.endsWith('.pdf')).length, 3);
+    assert.equal((await readdir(root)).filter(name => name.endsWith('.pdf')).length, 2);
     assert.match(await readFile(`${root}/audit.run.log`, 'utf8'), /status=HOLD locale=en/);
-    assert.equal(launches, 2); assert.equal(contexts, 4); assert.equal(closes, 2);
+    assert.equal(launches, 2); assert.equal(contexts, 2); assert.equal(closes, 2);
   } finally { await rm(root, { recursive: true, force: true }); }
 } else {
   let retained;

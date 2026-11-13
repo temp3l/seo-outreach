@@ -28,5 +28,17 @@ test('missing-alt aliases cannot borrow an unrelated empty-alt failure and limit
  data.pages[0].documentImages[0].controlContext.nameEvidence='unknown';assert.equal(prepareCustomerEvidenceTriage(audit,data)({...base,code:'image_alt_missing_or_empty'}),'review');
 });
 test('operator evidence coverage label survives settled execution and content PARTIAL',()=>{
- const {audit}=createEvidenceFixture(1);audit.crawl.limitations=['content_inspection_incomplete'];assert.match(renderOperatorStatusHtml(audit,'en'),/Crawl incomplete/u);
+ const {audit}=createEvidenceFixture(1);audit.target=audit.coverage.urls[0].url;audit.crawl.limitations=['content_inspection_incomplete'];const html=renderOperatorStatusHtml(audit,'en');assert.match(html,/Crawl complete/u);assert.match(html,/some page content was not analyzed/u);
+});
+
+// Customer copy describes image links, so an image-only button cannot substantiate it.
+test('image button evidence is not mislabeled as an image link',()=>{
+ const {audit}=createEvidenceFixture(1);audit.target=audit.coverage.urls[0].url;
+ const html='<a href="/go"><img src="/link.png" alt=""></a><button><img src="/button.png" alt=""></button>';
+ const data={...createPageDataExport([{requestedUrl:audit.target,finalUrl:audit.target,statusCode:200,contentType:'text/html',fetchedAt:audit.startedAt,responseBytes:html.length,html}]),target:audit.target,auditStartedAt:audit.startedAt,auditCompletedAt:audit.completedAt,auditSha256:auditResultSha256(audit)};
+ const finding={code:'image_alt_missing_or_empty',category:'accessibility',observed:'Inventory',evidence:[{pageUrl:audit.target,source:'http',observedAt:audit.startedAt}]};
+ assert.equal(prepareCustomerEvidenceTriage(audit,data)(finding),'admitted');
+ data.pages[0].documentImages=data.pages[0].documentImages.filter(i=>i.controlContext?.kind==='button');
+ assert.equal(data.pages[0].documentImages.length,1);
+ assert.equal(prepareCustomerEvidenceTriage(audit,data)(finding),'review');
 });

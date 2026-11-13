@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
 import { customerScopeDisclosure } from './scope.js';
 import { mobileLcpEvidence } from './performance-evidence.js';
 import { countDeduplicatedIssues } from './issue-counts.js';
 import { attachedCustomerEvidence, prepareCustomerEvidenceTriage } from './customer-evidence.js';
-import { isReportableEvidenceAdmissible } from './qualification.js';
+import { auditResultSha256, isReportableEvidenceAdmissible } from './qualification.js';
+import { sanitizeEvidenceUrl } from '@spora/webcrawl/analysis/page-data';
 import type { AuditFinding, AuditResult, FindingEvidence } from '@spora/webcrawl';
 import { validateReportContact, type ReportContact } from './report-contact.js';
 import { reportEvidenceCounts, reportCapturedUrlCount, reportPageReference, reportPageReferences, type ReportPageReference } from './references.js';
@@ -139,6 +141,42 @@ const CUSTOMER_TITLES: Readonly<Record<string, readonly [string, string]>> = {
   pagespeed_category_score: ['Mobile loading performance', 'Mobile Ladeleistung'],
 };
 
+export function customerPriorityTitle(topic: Pick<CustomerPriority, 'code'|'title'|'titleOverride'>, locale: Locale): string {
+  return topic.titleOverride ? topic.title : CUSTOMER_TITLES[topic.code]?.[locale === 'de' ? 1 : 0] ?? topic.title;
+}
+
+
+export function customerPriorityPageLabel(result: AuditResult, topic: CustomerPriority, customerFindings: readonly AuditFinding[], locale: Locale): string {
+  const t = (en: string, de: string): string => locale === 'de' ? de : en;
+  let count = reportCapturedUrlCount(result, topic.urls);
+  const pageData = attachedCustomerEvidence(result);
+  // A captured HTTP response is not enough to count a page as confirmed when
+  // the saved HTML source was truncated or its page-data export is unbound.
+  // Keep the historical label for legacy reports without attached page data.
+  if (pageData && pageData.auditSha256 === auditResultSha256(result)
+      && pageData.target === sanitizeEvidenceUrl(result.target)
+      && pageData.auditStartedAt === result.startedAt && pageData.auditCompletedAt === result.completedAt
+      && Array.isArray(pageData.pages) && pageData.targetPages === result.crawl.captured
+      && pageData.exportedPages === pageData.pages.length
+      && pageData.omittedPages === Math.max(0, pageData.targetPages - pageData.exportedPages)) {
+    const start = Date.parse(result.startedAt), end = Date.parse(result.completedAt);
+    const completeSources = new Set(pageData.pages.filter(page => page.source === 'http_html'
+      && ['captured', 'content_limit'].includes(page.contentStatus) && typeof page.rawHtml === 'string'
+      && page.rawHtmlTruncated === false && page.sourceSha256 === createHash('sha256').update(page.rawHtml).digest('hex')
+      && Number.isSafeInteger(page.statusCode)
+      && page.statusCode >= 200 && page.statusCode < 300
+      && Number.isFinite(Date.parse(page.fetchedAt)) && Date.parse(page.fetchedAt) >= start
+      && Date.parse(page.fetchedAt) <= end && page.finalUrlIdentity)
+      .map(page => page.finalUrlIdentity!));
+    const completeCount = new Set(topic.urls.filter(ref => completeSources.has(createHash('sha256').update(ref.identity).digest('hex'))).map(ref => ref.identity)).size;
+    count = completeCount > 0 ? completeCount : topic.urls.length > 0 ? null : count;
+  }
+  const broken = customerFindings.filter(f => f.code === 'broken_internal_link').flatMap(f => f.evidence);
+  const destinations = new Set(broken.flatMap(e => { try { return e.anchorHref ? [reportPageReference(new URL(e.anchorHref, e.pageUrl).href)?.identity].filter(Boolean) : []; } catch { return []; } })).size;
+  const referring = new Set(broken.filter(e => e.anchorHref).map(e => reportPageReference(e.pageUrl)?.identity).filter(Boolean)).size;
+  return topic.code === 'broken_internal_link' ? t(`${destinations} distinct broken ${destinations === 1 ? 'destination' : 'destinations'} · ${referring} referring ${referring === 1 ? 'page' : 'pages'}`, `${destinations} verschiedene fehlerhafte Ziele · ${referring} verweisende Seiten`) : topic.measurement ? t('Tested page', 'Geprüfte Seite') : count === null ? t('Page review', 'Seitenprüfung') : `${count} ${count === 1 ? t('page to review', 'Seite prüfen') : t('pages to review', 'Seiten prüfen')}`;
+}
+
 /** A4 customer PDF and responsive HTML share the same bounded briefing. */
 export function customerBriefing(result: AuditResult, locale: Locale, options: Readonly<{ issuer?: ReportContact; clientReady?: boolean }> = {}): string {
   const issuer = options.issuer === undefined ? undefined : validateReportContact(options.issuer);
@@ -154,11 +192,14 @@ export function customerBriefing(result: AuditResult, locale: Locale, options: R
   const labels: Record<string, string> = { performance: t('Performance', 'Leistung'), accessibility: t('Accessibility', 'Barrierefreiheit'), 'best-practices': t('Best Practices', 'Best Practices'), seo: t('SEO', 'SEO') };
   // Keep all scores in the audit; show the customer SEO gauge and score only at 59 or below.
   const visibleScores = scores.filter(s => s.name !== 'seo' || s.score < 60);
+  const mobileLab = mobileLcpEvidence(result);
+  const labTime = mobileLab && !selected.some(topic => topic.measurement === 'performance') && visibleScores.some(score => score.name === 'performance' && score.score === mobileLab.performanceScore && score.url?.identity === reportPageReference(result.target)?.identity) && Number.isFinite(Date.parse(mobileLab.fetchTime))
+    ? `${new Intl.DateTimeFormat(de ? 'de-DE' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }).format(new Date(mobileLab.fetchTime))} UTC` : undefined;
   const psi = scores.length ? `<div class="scores">${visibleScores.map(s => {
     const color = s.score >= 90 ? '#16876b' : s.score >= 50 ? '#c98224' : '#c94f4f';
     const circumference = 2 * Math.PI * 27;
     return `<div class="score-card"><svg viewBox="0 0 64 64" role="img" aria-label="${esc(labels[s.name]!)} ${s.score}/100"><circle cx="32" cy="32" r="27" fill="none" stroke="#e7eeec" stroke-width="5"/><circle cx="32" cy="32" r="27" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(circumference * s.score / 100).toFixed(1)} ${circumference.toFixed(1)}" transform="rotate(-90 32 32)"/><text x="32" y="36" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#183b45">${s.score}</text></svg><strong>${esc(labels[s.name]!)}</strong></div>`;
-  }).join('')}</div>${result.capabilities.pagespeed === 'partial' || scores.length < 4 ? `<p class="note">${t('Some measurements were unavailable.', 'Einige Messwerte waren nicht verfügbar.')}</p>` : ''}` : `<p>${scoreUrlConflict ? t('PageSpeed category scores refer to different pages and have been withheld. Request a fresh set for one page.', 'Die PageSpeed-Kategoriewerte beziehen sich auf unterschiedliche Seiten und werden deshalb nicht angezeigt. Lassen Sie eine neue Messung für eine einzelne Seite durchführen.') : scoreTargetConflict ? t('PageSpeed measurements do not match the audited target page and have been withheld. Request a fresh set for the audited page.', 'Die PageSpeed-Messungen stimmen nicht mit der geprüften Zielseite überein und werden deshalb nicht angezeigt. Lassen Sie eine neue Messung für die geprüfte Seite durchführen.') : result.capabilities.pagespeed === 'disabled' ? t('Not run for this audit.', 'Für diesen Lauf nicht durchgeführt.') : t('No usable scores were available. Ask your website provider to repeat the mobile measurement before drawing conclusions about speed.', 'Es lagen keine nutzbaren Werte vor. Lassen Sie die mobile Messung wiederholen, bevor Sie Rückschlüsse zur Geschwindigkeit ziehen.')}</p>`;
+  }).join('')}</div>${labTime || result.capabilities.pagespeed === 'partial' || scores.length < 4 ? `<p class="note">${labTime ? esc(t(`Mobile lab measured ${labTime}; not field data.`, `Mobile Labormessung vom ${labTime}; keine Felddaten.`)) : ''}${labTime && (result.capabilities.pagespeed === 'partial' || scores.length < 4) ? ' ' : ''}${result.capabilities.pagespeed === 'partial' || scores.length < 4 ? t('Some measurements were unavailable.', 'Einige Messwerte waren nicht verfügbar.') : ''}</p>` : ''}` : `<p>${scoreUrlConflict ? t('PageSpeed category scores refer to different pages and have been withheld. Request a fresh set for one page.', 'Die PageSpeed-Kategoriewerte beziehen sich auf unterschiedliche Seiten und werden deshalb nicht angezeigt. Lassen Sie eine neue Messung für eine einzelne Seite durchführen.') : scoreTargetConflict ? t('PageSpeed measurements do not match the audited target page and have been withheld. Request a fresh set for the audited page.', 'Die PageSpeed-Messungen stimmen nicht mit der geprüften Zielseite überein und werden deshalb nicht angezeigt. Lassen Sie eine neue Messung für die geprüfte Seite durchführen.') : result.enrichmentLimitations?.pagespeed === 'pagespeed_http_429' ? t('Mobile performance was not measured in this run.', 'Die mobile Leistung wurde in diesem Lauf nicht gemessen.') : result.enrichmentLimitations?.pagespeed === 'pagespeed_request_failed' ? t('Mobile performance was not measured in this run.', 'Die mobile Leistung wurde in diesem Lauf nicht gemessen.') : result.capabilities.pagespeed === 'disabled' ? t('Mobile performance was not measured in this run.', 'Die mobile Leistung wurde in diesem Lauf nicht gemessen.') : t('No usable scores were available. Ask your website provider to repeat the mobile measurement before drawing conclusions about speed.', 'Es lagen keine nutzbaren Werte vor. Lassen Sie die mobile Messung wiederholen, bevor Sie Rückschlüsse zur Geschwindigkeit ziehen.')}</p>`;
   const homepageMeasurement = (() => { try { const u = new URL(result.target); return u.pathname === '/' && !u.search && scores.every(score => score.url && captureKey(score.url.url) === captureKey(result.target)); } catch { return false; } })();
   // Website is accepted as issuer metadata for compatibility, but is omitted
   // from this PDF so the only site address remains the domain in the header.
@@ -167,23 +208,19 @@ export function customerBriefing(result: AuditResult, locale: Locale, options: R
   const footer = `<footer class="issuer"><aside class="offer"><strong>${t('Let’s get in touch', 'Lassen Sie uns sprechen')}</strong><p>${t('Contact us to discuss this review.', 'Kontaktieren Sie uns zu dieser Prüfung.')}</p></aside><div class="issuer-details">${publisherName ? `<strong>${publisherName}</strong>` : ''}${publisherChannels ? `<span>${publisherChannels}</span>` : ''}</div></footer>`;
   const hold = selected.length === 0 || compact;
   const cards = selected.map(topic => {
-    const count = reportCapturedUrlCount(result, topic.urls);
-    const broken = customerFindings.filter(f => f.code === 'broken_internal_link').flatMap(f => f.evidence);
-    const destinations = new Set(broken.flatMap(e => { try { return e.anchorHref ? [reportPageReference(new URL(e.anchorHref, e.pageUrl).href)?.identity].filter(Boolean) : []; } catch { return []; } })).size;
-    const referring = new Set(broken.filter(e => e.anchorHref).map(e => reportPageReference(e.pageUrl)?.identity).filter(Boolean)).size;
-    const pageLabel = topic.code === 'broken_internal_link' ? t(`${destinations} distinct broken ${destinations === 1 ? 'destination' : 'destinations'} · ${referring} referring ${referring === 1 ? 'page' : 'pages'}`, `${destinations} verschiedene fehlerhafte Ziele · ${referring} verweisende Seiten`) : topic.measurement ? t('Tested page', 'Geprüfte Seite') : count === null ? t('Page review', 'Seitenprüfung') : `${count} ${count === 1 ? t('page to review', 'Seite prüfen') : t('pages to review', 'Seiten prüfen')}`;
+    const pageLabel = customerPriorityPageLabel(result, topic, customerFindings, locale);
     const example = topic.urls[0];
     const observation = customerPriorityObservation(customerFindings, topic);
     const selectedEvidence = observation?.evidence;
     const exampleFinding = selectedEvidence ? result.findings.findIndex(f => f.code === topic.code && f.evidence.includes(selectedEvidence)) : -1;
     const exampleEvidence = exampleFinding < 0 || !selectedEvidence ? -1 : result.findings[exampleFinding]!.evidence.indexOf(selectedEvidence);
     const affectedPage = example ? `<p class="example">${t('Example page', 'Beispielseite')}: ${example.redacted ? `<span>${esc(customerPageLabel(example.url, locale))} (${t('query values withheld', 'Abfragewerte entfernt')})</span>` : `<a href="${esc(example.url)}">${esc(customerPageLabel(example.url, locale))}</a>`}</p>` : '';
-    const title = topic.titleOverride ? topic.title : CUSTOMER_TITLES[topic.code]?.[de ? 1 : 0] ?? topic.title;
+    const title = customerPriorityTitle(topic, locale);
     return `<article class="card"><span class="label" data-issue-code="${esc(topic.code)}" data-example-finding="${exampleFinding}" data-example-evidence="${exampleEvidence}">${pageLabel}</span><h3>${esc(title)}</h3>${affectedPage}${topic.observed ? `<p class="note">${esc(topic.observed)}</p>` : ''}<p>${esc(topic.why)}</p><p class="action"><strong>${t('Next step', 'Nächster Schritt')}:</strong> ${esc(topic.action)}</p></article>`;
   }).join('');
   return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t('Website review', 'Website-Prüfung')}</title><style>
 @page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;color:#183640;font:10pt/1.3 Arial,Helvetica,sans-serif}.page{width:210mm;min-height:297mm;margin:auto;padding:0 12mm;display:flex;flex-direction:column;overflow-wrap:anywhere}.hero{background:#102d3a;color:white;padding:5mm 12mm;margin:0 -12mm;border-radius:0}.hero-top{display:flex;justify-content:space-between;gap:4mm;font-size:9pt;color:#c4ddda}.hero h1{font-size:21pt;line-height:1.12;margin:3mm 0 1mm}.hero p{margin:1mm 0;font-size:10pt}.snapshots{display:flex;justify-content:center;gap:3mm;padding:4mm 0 0;flex-wrap:wrap}.snapshot{padding:1.5mm 3mm;border:1px solid #d8e3e1;border-radius:2mm;background:#f5f8f7;color:#49636a;font-size:9pt}.snapshot strong{color:#155e66;font-size:11pt;margin-right:2mm}.scope{margin-top:3mm;padding:3mm;background:#f4f8f7;border-left:1mm solid #16858a}.lighthouse{margin-top:4mm;padding:3mm 4mm;border:1px solid #d8e3e1;border-radius:2mm;background:#f5f8f7}.lighthouse h2,.findings h2{font-size:10pt;margin:0 0 2mm}.scores{display:flex;gap:3mm}.score-card{flex:1;min-width:0;text-align:center;background:white;border:1px solid #d8e3e1;border-radius:2mm;padding:2mm}.score-card svg{display:block;width:12mm;height:12mm;margin:auto}.score-card strong,.score-date{display:block;font-size:9pt}.findings{margin-top:4mm}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm}.one-topic .grid{grid-template-columns:1fr}.four-topics .grid,.six-topics .grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:3mm 4mm;border:1px solid #d8e3e1;border-left:.8mm solid #17858a;border-radius:2mm;break-inside:avoid}.card h3{font-size:12pt;line-height:1.2;margin:1mm 0}.card p{font-size:10pt;line-height:1.3;margin:0}.card p+p{margin-top:1.5mm}p{margin:1mm 0}.label{font-size:9pt;font-weight:bold;color:#49636a}.card .example{margin:1mm 0 2mm;font-size:9.5pt;color:#49636a}.example a{display:inline;color:#145c6a;text-decoration:underline;overflow-wrap:anywhere}.note{font-size:9pt}.notes{margin-top:2mm}.alert{color:#8e4b1d;font-weight:bold}.offer{margin-top:4mm;margin-bottom:4mm;break-inside:avoid}.offer strong{font-size:10pt}.offer p{font-size:9.5pt;line-height:1.3;margin:1mm 0}.issuer{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:1mm 4mm;margin:auto -12mm 0;padding:4mm 12mm;background:#102d3a;border:0;font-size:9.5pt;line-height:1.4;color:#c4ddda;overflow-wrap:anywhere}.issuer strong{color:white}.issuer span{display:inline}.compact .hero h1{font-size:15pt}@media screen and (max-width:700px){.page{width:100%;min-height:0;padding:20px}.hero{padding:16px}.hero-top{flex-wrap:wrap}.scores{flex-wrap:wrap}.issuer{margin-top:24px}}@media print{.six-topics .hero{padding-top:3mm;padding-bottom:3mm}.six-topics .hero h1{font-size:18pt}.six-topics .snapshots{padding-top:2mm}.six-topics .lighthouse{padding:2mm 3mm}.six-topics .score-card{padding:1mm}.six-topics .score-card svg{width:10mm;height:10mm}.six-topics .grid{gap:1.5mm}.six-topics .card{padding:1.5mm 2mm}.six-topics .card h3{font-size:11pt}.six-topics .card p{line-height:1.2}.six-topics .card p+p{margin-top:1mm}.page{margin:0}.hero{padding-top:4mm;padding-bottom:4mm}.scope{padding:2mm}.lighthouse,.findings{margin-top:3mm}.grid{gap:2mm}.card{padding:2mm 3mm}.offer{margin-top:3mm;margin-bottom:3mm}.issuer{padding-top:3mm;padding-bottom:3mm}}
-.issuer{display:block;flex:none;margin:auto -12mm 0;padding:0;width:auto;background:#102d3a;color:#c4ddda}.issuer .offer{margin:0;padding:3mm 12mm 2mm}.issuer-details{display:flex;align-items:center;flex-wrap:wrap;gap:1mm 4mm;padding:2mm 12mm 3mm;border-top:1px solid #3b5660}.issuer .offer strong{color:white}</style></head><body data-publication-status="${hold ? 'HOLD' : 'PREVIEW'}" data-client-ready="false" data-review-layout-check="true"><main class="page${hold ? ' hold-preview' : ''}${selected.length === 1 ? ' one-topic' : ''}${compact ? ' compact' : selected.length === 4 ? ' four-topics' : selected.length > 4 ? (selected.length === 5 ? ' six-topics five-topics' : ' six-topics') : ''}"><header class="hero"><div class="hero-top"><strong>${t('WEBSITE REVIEW', 'WEBSITE-PRÜFUNG')}</strong><span>${t('Website checked', 'Website geprüft')} · <time datetime="${esc(result.startedAt)}">${esc(date)}</time></span></div><h1>${esc(host)}</h1><p><strong>${t('What deserves attention', 'Was Aufmerksamkeit verdient')}</strong></p></header><div class="snapshots"><div class="snapshot"><strong>${capturedCount ?? '?'}</strong>${t(capturedCount === 1 ? 'page' : 'pages', capturedCount === 1 ? 'Seite' : 'Seiten')}</div><div class="snapshot" data-summary="deduplicated-issues"><strong>${deduplicatedIssues}</strong>${t(deduplicatedIssues === 1 ? 'SEO finding' : 'SEO findings', deduplicatedIssues === 1 ? 'SEO-Befund' : 'SEO-Befunde')}</div><div class="snapshot"><strong>${selected.length}</strong>${t(selected.length === 1 ? 'topic' : 'topics', selected.length === 1 ? 'Thema' : 'Themen')}</div></div><section class="lighthouse"><h2>${homepageMeasurement || !scores.length && (() => { try { const u = new URL(result.target); return u.pathname === '/' && !u.search; } catch { return false; } })() ? t('Homepage · Mobile lab page', 'Startseite · Mobile Labormessung') : t('Tested page · Mobile lab page', 'Geprüfte Seite · Mobile Labormessung')}</h2>${psi}</section><section class="findings"><h2>${selected.length ? t('Key observations', 'Wichtige Beobachtungen') : t('No selected priorities', 'Keine ausgewählten Schwerpunkte')}</h2>${selected.length ? `<div class="grid${selected.length === 5 ? ' five-topics' : ''}">${cards}</div>` : `<p>${t('No specific priority was selected; this does not establish that the website is problem-free.', 'Es wurde kein Schwerpunkt ausgewählt; das belegt keine Fehlerfreiheit der Website.')}${customerScopeDisclosure(result, locale) ? ` ${esc(customerScopeDisclosure(result, locale))}` : ''}</p>`}</section>${footer}</main></body></html>`;
+.issuer{display:block;flex:none;margin:auto -12mm 0;padding:0;width:auto;background:#102d3a;color:#c4ddda}.issuer .offer{margin:0;padding:3mm 12mm 2mm}.issuer-details{display:flex;align-items:center;flex-wrap:wrap;gap:1mm 4mm;padding:2mm 12mm 3mm;border-top:1px solid #3b5660}.issuer .offer strong{color:white}</style></head><body data-publication-status="${hold ? 'HOLD' : 'PREVIEW'}" data-client-ready="false" data-review-layout-check="true"><main class="page${hold ? ' hold-preview' : ''}${selected.length === 1 ? ' one-topic' : ''}${compact ? ' compact' : selected.length === 4 ? ' four-topics' : selected.length > 4 ? (selected.length === 5 ? ' six-topics five-topics' : ' six-topics') : ''}"><header class="hero"><div class="hero-top"><strong>${t('WEBSITE REVIEW', 'WEBSITE-PRÜFUNG')}</strong><span>${t('Website checked', 'Website geprüft')} · <time datetime="${esc(result.startedAt)}">${esc(date)}</time></span></div><h1>${esc(host)}</h1><p><strong>${t('What deserves attention', 'Was Aufmerksamkeit verdient')}</strong></p></header><div class="snapshots"><div class="snapshot"><strong>${capturedCount ?? '?'}</strong>${t(capturedCount === 1 ? 'page' : 'pages', capturedCount === 1 ? 'Seite' : 'Seiten')}</div><div class="snapshot" data-summary="deduplicated-issues"><strong>${deduplicatedIssues}</strong>${t(deduplicatedIssues === 1 ? 'check observation' : 'check observations', deduplicatedIssues === 1 ? 'Prüfbeobachtung' : 'Prüfbeobachtungen')}</div><div class="snapshot"><strong>${selected.length}</strong>${t(selected.length === 1 ? 'topic' : 'topics', selected.length === 1 ? 'Thema' : 'Themen')}</div></div><section class="lighthouse"><h2>${homepageMeasurement || !scores.length && (() => { try { const u = new URL(result.target); return u.pathname === '/' && !u.search; } catch { return false; } })() ? t('Homepage · Mobile lab page', 'Startseite · Mobile Labormessung') : t('Tested page · Mobile lab page', 'Geprüfte Seite · Mobile Labormessung')}</h2>${psi}</section><section class="findings"><h2>${selected.length ? t('Key observations', 'Wichtige Beobachtungen') : t('No selected priorities', 'Keine ausgewählten Schwerpunkte')}</h2>${selected.length ? `<div class="grid${selected.length === 5 ? ' five-topics' : ''}">${cards}</div>` : `<p>${t('No specific priority was selected; this does not establish that the website is problem-free.', 'Es wurde kein Schwerpunkt ausgewählt; das belegt keine Fehlerfreiheit der Website.')}${customerScopeDisclosure(result, locale) ? ` ${esc(customerScopeDisclosure(result, locale))}` : ''}</p>`}</section>${footer}</main></body></html>`;
 }
 
 export function customerPriorityProjection(result: AuditResult, locale: Locale = 'en') {
@@ -299,13 +336,20 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
     duplicate_h1: t('Some pages repeat main-heading text.', 'Einige Seiten wiederholen den Text der Hauptüberschrift.'),
   }, t('Headings help visitors and screen-reader users understand the offer. These observations do not prove a ranking problem.', 'Überschriften helfen beim Verstehen des Angebots und bei der Nutzung mit Screenreader. Diese Beobachtungen belegen kein Rankingproblem.'), t('Ask your editor to check the affected pages. Make the main offer clear and arrange headings in a useful reading order.', 'Lassen Sie die betroffenen Seiten redaktionell prüfen. Benennen Sie das Hauptangebot klar und ordnen Sie Überschriften sinnvoll.'), t('Website editor', 'Website-Redaktion'));
   const scoreGroups = new Map<string, { candidates: Array<{ score: number; url: ReportPageReference; observedAt: string }>; invalid: boolean }>();
+  const associatedLab = mobileLcpEvidence(result);
+  const findingIsAdmissible = (finding: AuditFinding): boolean => {
+    const association = finding.code === 'pagespeed_category_score' ? associatedLab?.association : undefined;
+    return association
+      ? isReportableEvidenceAdmissible(result, finding, Date.parse(association.requestedAt), Date.parse(association.completedAt))
+      : isReportableEvidenceAdmissible(result, finding);
+  };
   for (const finding of orderedFindings) {
     if (finding.code !== 'pagespeed_category_score') continue;
     const name = /^(performance|accessibility|best-practices|seo)\b/iu.exec(finding.observed)?.[1]?.toLowerCase();
     if (!name) continue;
     let group = scoreGroups.get(name);
     if (!group) { group = { candidates: [], invalid: false }; scoreGroups.set(name, group); }
-    if (!isReportableEvidenceAdmissible(result, finding)) group.invalid = true;
+    if (!findingIsAdmissible(finding)) group.invalid = true;
     const parsedScore = /^(?:performance|accessibility|best-practices|seo) score:\s*(\d+(?:\.\d+)?)\/100(?:\.|$)/iu.exec(finding.observed)?.[1];
     const evidence = finding.evidence.filter(item => item.source === 'pagespeed');
     if (!parsedScore || !evidence.length) { group.invalid = true; continue; }
@@ -333,12 +377,18 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
   const scoreTargetConflict = observedScoreCandidates.length > 0 && (auditTargetIdentity === undefined || observedScoreCandidates.some(score => score.url.identity !== auditTargetIdentity));
   const scoreUrlConflict = new Set(observedScoreCandidates.map(score => score.url.identity)).size > 1;
   const scores = scoreTargetConflict || scoreUrlConflict ? [] : scoreCandidates;
-  const performance = scores.find(s => s.name === 'performance');
-  const lcp = mobileLcpEvidence(result);
+  const lcp = associatedLab;
+  const performanceFetchTime=lcp?.fetchTime ?? scores.find(score=>score.name==='performance')?.observedAt;
+  const performanceFetchLabel=performanceFetchTime && Number.isFinite(Date.parse(performanceFetchTime))
+    ? `${new Intl.DateTimeFormat(de ? 'de-DE' : 'en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(performanceFetchTime))} UTC`
+    : performanceFetchTime;
+  const associatedPerformance = lcp?.association ? { name: 'performance', score: lcp.performanceScore, url: reportPageReference(result.target), observedAt: lcp.association.completedAt } : undefined;
+  const performance = scores.find(s => s.name === 'performance') ?? associatedPerformance;
+  const projectedScores = associatedPerformance && !scores.some(score => score.name === 'performance') ? [...scores, associatedPerformance] : scores;
   // Preserve the existing score boundary; material mobile lab LCP also merits review.
   // Give this measured loading concern medium editorial priority so low-severity
   // metadata checks cannot crowd it out of the customer briefing's six-topic cap.
-  if (performance && (performance.score <= 50 || lcp && lcp.milliseconds > 4_000 && lcp.performanceScore === performance.score) && result.findings.some(f => f.code === 'pagespeed_category_score' && f.evidence.some(e => e.value === performance.score && e.observedAt === performance.observedAt) && isReportableEvidenceAdmissible(result, f))) topics.push({ code: 'pagespeed_category_score', measurement: 'performance', severity: 2, rank: 20, title: t('Investigate mobile loading performance', 'Ladeleistung auf Smartphones untersuchen'), observed: t(`The tested page scored ${performance.score}/100 in the mobile PageSpeed lab measurement recorded ${lcp?.fetchTime ?? performance.observedAt}.${lcp ? ` LCP was ${(lcp.milliseconds / 1000).toFixed(1)} seconds.` : ''}`, `Die getestete Seite erreichte ${performance.score}/100 in der mobilen PageSpeed-Labormessung vom ${lcp?.fetchTime ?? performance.observedAt}.${lcp ? ` LCP betrug ${(lcp.milliseconds / 1000).toFixed(1)} Sekunden.` : ''}`), why: t('This laboratory score is a reason to investigate, not a measurement of lost enquiries or bookings.', 'Dieser Laborwert ist ein Anlass zur Prüfung, keine Messung verlorener Anfragen oder Buchungen.'), action: t('Ask your developer to inspect the main loading bottlenecks. Check the journey from your main offer to enquiry or booking on a phone.', 'Lassen Sie die größten Ladeprobleme untersuchen. Prüfen Sie auf einem Smartphone den Weg vom Hauptangebot zur Anfrage oder Buchung.'), owner: t('Website developer', 'Webentwicklung'), urls: performance.url ? [performance.url] : [], group: 20 });
+  if (performance && (performance.score <= 50 || lcp && lcp.milliseconds > 4_000 && lcp.performanceScore === performance.score) && (associatedPerformance === performance || result.findings.some(f => f.code === 'pagespeed_category_score' && f.evidence.some(e => e.value === performance.score && e.observedAt === performance.observedAt) && findingIsAdmissible(f)))) topics.push({ code: 'pagespeed_category_score', measurement: 'performance', severity: 2, rank: 20, title: t('Investigate mobile loading performance', 'Ladeleistung auf Smartphones untersuchen'), observed: t(`The tested page scored ${performance.score}/100 in the mobile PageSpeed lab measurement recorded ${performanceFetchLabel}.${lcp ? ` LCP was ${(lcp.milliseconds / 1000).toFixed(1)} seconds.` : ''}`, `Die getestete Seite erreichte ${performance.score}/100 in der mobilen PageSpeed-Labormessung vom ${performanceFetchLabel}.${lcp ? ` LCP betrug ${(lcp.milliseconds / 1000).toFixed(1)} Sekunden.` : ''}`), why: t('This laboratory score is a reason to investigate, not a measurement of lost enquiries or bookings.', 'Dieser Laborwert ist ein Anlass zur Prüfung, keine Messung verlorener Anfragen oder Buchungen.'), action: t('Ask your developer to inspect the main loading bottlenecks. Check the journey from your main offer to enquiry or booking on a phone.', 'Lassen Sie die größten Ladeprobleme untersuchen. Prüfen Sie auf einem Smartphone den Weg vom Hauptangebot zur Anfrage oder Buchung.'), owner: t('Website developer', 'Webentwicklung'), urls: performance.url ? [performance.url] : [], group: 20 });
   const reportableCodes = new Set(topics.map(topic => topic.code));
   const duplicateTitle = topics.find(topic => topic.code === 'duplicate_title_across_pages');
   const duplicateDescription = topics.find(topic => topic.code === 'duplicate_meta_description_across_pages');
@@ -366,7 +416,8 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
   // Describe checks without a card in the most closely related visible card.
   // This keeps the badge contract while making its scope visible to customers.
   const visibleCodes = new Set(selected.map(topic => topic.code));
-  if (duplicateTitle && duplicateDescription && !topics.includes(duplicateDescription) && visibleCodes.has(duplicateTitle.code)) visibleCodes.add(duplicateDescription.code);
+  const selectedEvidenceCodes = new Map(selected.map(topic => [topic.code, new Set([topic.code])]));
+  if (duplicateTitle && duplicateDescription && !topics.includes(duplicateDescription) && visibleCodes.has(duplicateTitle.code)) { visibleCodes.add(duplicateDescription.code); selectedEvidenceCodes.get(duplicateTitle.code)?.add(duplicateDescription.code); }
   let coveredFindings = countedFindings.filter(finding => visibleCodes.has(finding.code));
   let coveredCount = countDeduplicatedIssues(coveredFindings);
   for (const topic of topics) {
@@ -380,12 +431,13 @@ export function customerPriorityProjection(result: AuditResult, locale: Locale =
     if (!observations) continue;
     const parent = selected.find(candidate => candidate.group === topic.group) ?? selected[0];
     if (!parent) continue;
-    const extra = t(`Also counted in overall SEO findings: ${topic.title.replace(/[.!?]+$/u, '')} (${observations} check ${observations === 1 ? 'observation' : 'observations'}).`, `Ebenfalls in SEO-Befunden gezählt: ${topic.title.replace(/[.!?]+$/u, '')} (${observations} Prüfbeobachtung${observations === 1 ? '' : 'en'}).`);
+    for (const code of codes) selectedEvidenceCodes.get(parent.code)?.add(code);
+    const extra = t(`Also counted in overall check observations: ${topic.title.replace(/[.!?]+$/u, '')} (${observations} check ${observations === 1 ? 'observation' : 'observations'}).`, `Ebenfalls in Prüfbeobachtungen gezählt: ${topic.title.replace(/[.!?]+$/u, '')} (${observations} Prüfbeobachtung${observations === 1 ? '' : 'en'}).`);
     parent.observed = [parent.observed, extra].filter(Boolean).join(' ');
   }
   const coverageDisclosure = customerScopeDisclosure(result, locale);
   if (selected[0] && coverageDisclosure) selected[0].observed = [selected[0].observed, coverageDisclosure].filter(Boolean).join(' ');
   const deduplicatedIssues = countDeduplicatedIssues(countedFindings);
-  return { selected, scores, scoreUrlConflict, scoreTargetConflict, customerFindings, countedFindings, deduplicatedIssues };
+  return { selected, selectedEvidenceCodes: selected.map(topic => ({ code: topic.code, findingCodes: [...(selectedEvidenceCodes.get(topic.code) ?? new Set([topic.code]))] })), scores: projectedScores, scoreUrlConflict, scoreTargetConflict, customerFindings, countedFindings, deduplicatedIssues };
 
 }
