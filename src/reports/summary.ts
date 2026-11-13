@@ -6,7 +6,7 @@ import { portugueseCustomerBriefing } from './customer-pt.js';
 import type { ReportContact } from './report-contact.js';
 import { reportPageReferences, type ReportPageReference } from './references.js';
 import { hasIncompleteCrawl } from '@spora/webcrawl/evidence';
-import { isCustomerReleaseQualified, type CustomerReleaseQualification } from './qualification.js';
+import type { CustomerReleaseQualification } from './qualification.js';
 export type { ReportContact } from './report-contact.js';
 
 export type SummaryLocale = 'en' | 'de';
@@ -84,9 +84,7 @@ const SECURITY_LABELS: Readonly<Record<string, Readonly<{ en: string; de: string
 
 function publicationHtml(result: AuditResult, locale: CustomerLocale, options: Readonly<{ issuer?: ReportContact; qualification?: CustomerReleaseQualification }>): string {
   let html = locale === 'pt-BR' ? portugueseCustomerBriefing(result, options) : customerBriefing(result, locale, options);
-  const hasReplyChannel = Boolean(options.issuer?.email || options.issuer?.phone);
-  const eligible = isCustomerReleaseQualified(result, options.qualification) && hasReplyChannel && html.includes('data-publication-status="PREVIEW"');
-  if (eligible) return html.replace('data-publication-status="PREVIEW"', 'data-publication-status="CLIENT_READY"').replace('data-client-ready="false"', 'data-client-ready="true"').replace('<p class="scope alert">REVIEW — não distribuir ao cliente; revisão interna necessária.</p>', '');
+  // Rendering never grants release: only the reviewed exact-byte workflow can.
   if (html.includes('data-publication-status="PREVIEW"')) {
     html = html.replace('data-publication-status="PREVIEW"', 'data-publication-status="HOLD"');
 
@@ -144,13 +142,22 @@ function operatorFindingCard(group: { code: string; findings: AuditFinding[]; pa
     if (!match || !name || !['performance', 'accessibility', 'best-practices', 'seo'].includes(name)) return [];
     return [`${scoreNames[name]![locale]}: ${score}/100`];
   });
-  const detail = group.code === 'pagespeed_category_score' ? pageSpeedDetails.join(' · ') : group.findings[0]?.observed ?? '';
+  const headerNeeds: Readonly<Record<string, readonly string[]>> = {
+    hsts_missing_or_inactive: ['strictTransportSecurity'], missing_nosniff_header: ['xContentTypeOptions'],
+    missing_referrer_policy: ['referrerPolicy'], invalid_referrer_policy: ['referrerPolicy'], unsafe_referrer_policy: ['referrerPolicy'], weak_referrer_policy: ['referrerPolicy'],
+    missing_content_security_policy: ['contentSecurityPolicy', 'contentSecurityPolicyReportOnly'], csp_report_only: ['contentSecurityPolicy', 'contentSecurityPolicyReportOnly'],
+    missing_frame_protection: ['contentSecurityPolicy', 'xFrameOptions'], csp_unsafe_inline_script: ['contentSecurityPolicy'], csp_unsafe_eval: ['contentSecurityPolicy'], csp_broad_script_sources: ['contentSecurityPolicy'], csp_object_src_not_disabled: ['contentSecurityPolicy'], csp_base_uri_not_restricted: ['contentSecurityPolicy'],
+  };
+  const needs = headerNeeds[group.code];
+  const unverifiedHeader = Boolean(needs && group.findings.some(f => f.evidence.some(e => needs.some(name => { const h = e.securityHeaderEvidence?.find(item => item.name === name); return !h || h.status === 'not_captured'; }))));
+  const observed = group.code === 'pagespeed_category_score' ? pageSpeedDetails.join(' · ') : group.findings[0]?.observed ?? '';
+  const detail = unverifiedHeader ? `${observed} ${locale === 'de' ? 'Einige Headerwerte wurden nicht aufbewahrt; diese historischen Ergebnisse sind nicht unabhängig überprüfbar.' : 'Some header values were not retained; those historical observations are independently unverified.'}` : observed;
   const severityRank: Readonly<Record<string, number>> = { critical: 0, high: 1, medium: 2, low: 3, informational: 4 };
   const severity = group.findings.map((finding) => finding.severity ?? 'informational').sort((a, b) => (severityRank[a] ?? 4) - (severityRank[b] ?? 4))[0] ?? 'informational';
   const severityLabel = locale === 'de'
     ? ({ critical: 'Kritisch', high: 'Hoch', medium: 'Mittel', low: 'Niedrig', informational: 'Hinweis' } as const)[severity as 'critical' | 'high' | 'medium' | 'low' | 'informational']
     : severity;
-  return `<article class="check"><header><strong>${escape(severityLabel)} · ${escape(labelFor(group.code, locale))}</strong><span>${reportEvidenceCounts(result, group.findings).affectedCapturedUrls ?? '?'} ${locale === 'de' ? 'erfasste URLs' : 'captured URLs'} · ${reportEvidenceCounts(result, group.findings).affectedAssets} ${locale === 'de' ? 'Bilddateien' : 'image/assets'}</span></header><p class="category">${escape(locale === 'de' ? ({ indexability: 'Indexierbarkeit', metadata: 'Metadaten', content: 'Inhalt', performance: 'Leistung', accessibility: 'Barrierefreiheit', security: 'Sicherheit', contacts: 'Kontakte' } as const)[category] : category)}</p><p>${escape(detail)}</p>${example ? example.redacted ? `<p class="example">${locale === 'de' ? 'Genaue Adresse im privaten Audit (Abfrageparameter entfernt).' : 'Exact address in the private audit (query parameters removed).'}</p>` : `<p class="example">${locale === 'de' ? 'Beispiel' : 'Example'}: <a href="${escape(example.url)}">${escape(example.url)}</a></p>` : ''}</article>`;
+  return `<article class="check"><header><strong>${escape(severityLabel)} · ${unverifiedHeader ? (locale === 'de' ? 'Unbestätigt: ' : 'Unverified: ') : ''}${escape(labelFor(group.code, locale))}</strong><span>${reportEvidenceCounts(result, group.findings).affectedCapturedUrls ?? '?'} ${locale === 'de' ? 'erfasste URLs' : 'captured URLs'} · ${reportEvidenceCounts(result, group.findings).affectedAssets} ${locale === 'de' ? 'Bilddateien' : 'image/assets'}</span></header><p class="category">${escape(locale === 'de' ? ({ indexability: 'Indexierbarkeit', metadata: 'Metadaten', content: 'Inhalt', performance: 'Leistung', accessibility: 'Barrierefreiheit', security: 'Sicherheit', contacts: 'Kontakte' } as const)[category] : category)}</p><p>${escape(detail)}</p>${example ? example.redacted ? `<p class="example">${locale === 'de' ? 'Genaue Adresse im privaten Audit (Abfrageparameter entfernt).' : 'Exact address in the private audit (query parameters removed).'}</p>` : `<p class="example">${locale === 'de' ? 'Beispiel' : 'Example'}: <a href="${escape(example.url)}">${escape(example.url)}</a></p>` : ''}</article>`;
 }
 
 function operatorSecurityCoverage(result: AuditResult, locale: SummaryLocale): string {
@@ -170,7 +177,7 @@ function operatorSecurityCoverage(result: AuditResult, locale: SummaryLocale): s
 export function renderOperatorStatusHtml(result: AuditResult, locale: SummaryLocale = 'de'): string {
   const groups = findingGroups(result).sort((a, b) => b.pages.length - a.pages.length || a.code.localeCompare(b.code));
   const date = dateLabel(result.startedAt, locale);
-  const partial = hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls);
+  const partial = hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls) || result.crawl.limitations.includes('content_inspection_incomplete');
   const state = locale === 'de' ? partial ? 'Crawl unvollständig' : 'Crawl abgeschlossen' : partial ? 'Crawl incomplete' : 'Crawl complete';
   const counts = reportEvidenceCounts(result);
   const coverageText = locale === 'de'

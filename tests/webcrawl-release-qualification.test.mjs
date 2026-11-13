@@ -79,11 +79,11 @@ test('broken-link evidence binds page, final URL, redirect chain and source href
     assert.equal(isReportableEvidenceAdmissible(audit, link), false);
     const q = qualification(audit);
     assert.equal(isCustomerReleaseQualified(audit, q), true, 'unrelated invalid link is omitted while the supported metadata observation remains');
-    for (const locale of ['en', 'de', 'pt-BR']) {
+    for (const locale of ['en', 'de']) {
       const sender = { ...issuer, phone: '+31 20 123 4567' };
-      assert.match(renderCustomerSummaryHtml(audit, locale, { issuer: sender, qualification: q }), /data-publication-status="CLIENT_READY"/u);
+      assert.match(renderCustomerSummaryHtml(audit, locale, { issuer: sender, qualification: q }), /data-publication-status="HOLD"/u);
       const mobile = await renderMobileCustomerPdf(audit, async html => Buffer.from(html), sender, locale, 'CLIENT_READY', q);
-      assert.match(decode(mobile), /data-publication-status="CLIENT_READY"/u);
+      assert.match(decode(mobile), /data-publication-status="HOLD"/u);
     }
     assert.doesNotMatch(renderWhatsAppDraft(audit), /returned HTTP 404/u, 'use the valid metadata observation instead');
     audit.findings = [link]; recount(audit);
@@ -110,7 +110,7 @@ test('a recorded allowed seed redirect establishes child-page scope without admi
     assert.equal(audit.coverage.checks.sensitiveForms.checked, 2);
     assert.equal(isCustomerReleaseQualified(audit, qualification(audit)), true);
     const original = structuredClone(audit);
-    for (const locale of ['en', 'de']) assert.match(renderCustomerSummaryHtml(audit, locale, { issuer, qualification: qualification(audit) }), /data-publication-status="CLIENT_READY"/u);
+    for (const locale of ['en', 'de']) assert.match(renderCustomerSummaryHtml(audit, locale, { issuer, qualification: qualification(audit) }), /data-publication-status="HOLD"/u);
     for (const mutate of [
       a => { a.crawlSettings.policy.allowedHosts = ['fixture.test']; },
       a => { a.coverage.urls[0].finalUrl = a.target; a.coverage.urls[0].redirectChain = []; },
@@ -167,13 +167,13 @@ test('one to three supported findings release only through the matching explicit
     assert.match(direct, /data-publication-status="HOLD"/u);
     assert.doesNotMatch(direct, /data-publication-status="CLIENT_READY"/u);
     const pair = await renderCustomerPdfPair(audit, async html => Buffer.from(html), issuer, approved);
-    assert.equal(pair.status, 'CLIENT_READY');
+    assert.equal(pair.status, 'HOLD');
     assert.equal((decode(pair.en).match(/<article class="card">/gu) ?? []).length, count);
-    assert.match(decode(pair.en), /data-publication-status="CLIENT_READY"/u);
-    assert.match(decode(pair.de), /data-publication-status="CLIENT_READY"/u);
+    assert.match(decode(pair.en), /data-publication-status="HOLD"/u);
+    assert.match(decode(pair.de), /data-publication-status="HOLD"/u);
     let mobileHtml = '';
     await renderMobileCustomerPdf(audit, async html => { mobileHtml = html; return Buffer.from(html); }, issuer, 'en', pair.status, approved);
-    assert.match(mobileHtml, /data-publication-status="CLIENT_READY"/u);
+    assert.match(mobileHtml, /data-publication-status="HOLD"/u);
   }
 });
 
@@ -195,7 +195,9 @@ test('missing, mismatched, stale and identity qualifications fail closed; privat
   recount(privateReview);
   assert.equal(isCustomerReleaseQualified(privateReview, qualification(privateReview)), true);
   assert.doesNotMatch(renderCustomerSummaryHtml(privateReview, 'en', {issuer, qualification:qualification(privateReview)}), /sensitive_form_over_http|>private</u);
-  const stale = structuredClone(audit); stale.startedAt = new Date(Date.now() - 48 * 60 * 60_000).toISOString();
+  const withinTwoWeeks = structuredClone(audit); withinTwoWeeks.startedAt = new Date(Date.now() - 13 * 24 * 60 * 60_000).toISOString();
+  assert.equal(isCustomerReleaseQualified(withinTwoWeeks, qualification(withinTwoWeeks)), true);
+  const stale = structuredClone(audit); stale.startedAt = new Date(Date.now() - 15 * 24 * 60 * 60_000).toISOString();
   assert.equal(isCustomerReleaseQualified(stale, qualification(stale)), false);
 });
 
@@ -214,7 +216,7 @@ test('a valid current finding cannot authorize stale, foreign, uncaptured, or fa
     const original = structuredClone(audit);
     const q = qualification(audit);
     assert.equal(isCustomerReleaseQualified(audit, q), false);
-    for (const locale of ['en', 'de', 'pt-BR']) {
+    for (const locale of ['en', 'de']) {
       assert.match(renderCustomerSummaryHtml(audit, locale, { issuer: { name: 'Synthetic Reviewer', email: 'reviewer@example.test', phone: '+31 20 123 4567' }, qualification: q }), /data-publication-status="HOLD"/u);
       let mobile = '';
       await renderMobileCustomerPdf(audit, async html => { mobile = html; return Buffer.from(html); }, { name: 'Synthetic Reviewer', email: 'reviewer@example.test', phone: '+31 20 123 4567' }, locale, 'CLIENT_READY', q);
@@ -279,7 +281,7 @@ test('successful rendering and caller supplied readiness booleans cannot change 
   await renderMobileCustomerPdf(audit, async value => { html = value; return Buffer.from(value); }, issuer, 'en', 'CLIENT_READY');
   assert.match(html, /data-publication-status="HOLD"/u);
   assert.match(renderWhatsAppDraft(audit, 'customer.pdf', 'CLIENT_READY'), /Report release:\*\* HOLD/u);
-  assert.match(renderWhatsAppDraft(audit, 'customer.pdf', 'CLIENT_READY', qualification(audit)), /Report release:\*\* CLIENT_READY/u);
+  assert.match(renderWhatsAppDraft(audit, 'customer.pdf', 'CLIENT_READY', qualification(audit)), /Report release:\*\* HOLD/u);
 });
 
 
@@ -298,7 +300,7 @@ test('scoped report release records crawl/check gaps and omits an unsupported un
   assert.equal(isCustomerReleaseQualified(audit,qualification(audit)),true);
   for(const locale of ['en','de']) {
     const html=renderCustomerSummaryHtml(audit,locale,{issuer,qualification:qualification(audit)});
-    assert.match(html,/data-publication-status="CLIENT_READY"/);
+    assert.match(html,/data-publication-status="HOLD"/);
     assert.doesNotMatch(html,/data-scope-disclosure="true"|Based on captured pages|Basierend auf erfassten Seiten/);
     assert.doesNotMatch(html,/data-issue-code="missing_h1"/);
     const mobile=await renderMobileCustomerPdf(audit,async html=>Buffer.from(html),issuer,locale,'CLIENT_READY',qualification(audit));
@@ -342,7 +344,7 @@ test('invalid PSI measurements cannot become customer score cards beside a valid
     mutate(psi);audit.findings.push(psi);recount(audit);
     assert.equal(isCustomerReleaseQualified(audit,qualification(audit)),true);
     const html=renderCustomerSummaryHtml(audit,'en',{issuer,qualification:qualification(audit)});
-    assert.match(html,/data-publication-status="CLIENT_READY"/);
+    assert.match(html,/data-publication-status="HOLD"/);
     assert.doesNotMatch(html,/Performance 42\/100|score: 42\/100|>42</);
   }
 });

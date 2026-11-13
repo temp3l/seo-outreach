@@ -58,7 +58,10 @@ test('operator PDF is opt-in and can be planned independently from customer PDFs
   assert.equal(defaultPlan.writePdf, true);
   assert.equal(defaultPlan.writeOperatorPdf, false);
   assert.ok(defaultPlan.outputPaths.includes('/tmp/operator-opt-in-default.pdf'));
+  assert.equal(defaultPlan.resolvedPageDataPath, '/tmp/operator-opt-in-default.page-data.json');
   assert.ok(!defaultPlan.outputPaths.includes('/tmp/operator-opt-in-default.operator-status.pdf'));
+  const withoutEvidence = resolveProfileOptions(base, ['--no-page-data']);
+  assert.equal(planSingleSiteOutputs(['https://fixture.example/', '--out', '/tmp/no-data', '--no-page-data'], withoutEvidence).resolvedPageDataPath, undefined);
 
   const operatorOnly = resolveProfileOptions(base, ['--no-pdf', '--operator-pdf']);
   const operatorPlan = planSingleSiteOutputs(['https://fixture.example/', '--out', '/tmp/operator-opt-in-only', '--no-pdf', '--operator-pdf'], operatorOnly);

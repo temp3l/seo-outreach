@@ -1,0 +1,82 @@
+{
+  "scope": "Candidate v7: v6 geometry with an observation-count qualifier and evidence-aware admission.",
+  "dpi": 144,
+  "environment": {
+    "node": "v24.18.0",
+    "icu": "78.3",
+    "playwright": "1.64.1",
+    "platform": "linux",
+    "architecture": "x64",
+    "font": {
+      "family": "Arial",
+      "path": "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+      "sha256": "35c0f3559d8db569e36c31095b8a60d441643d95f59139de40e23fada819b833"
+    },
+    "poppler": "pdfinfo version 22.12.0",
+    "chromium": "156.0.8078.4"
+  },
+  "sourceFingerprint": "customer-pdf-v7-20261112-candidate",
+  "results": [
+    {
+      "id": "a4-en",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "htmlSha256": "a631a1415d09597c94d66886650072a292675c0d4ebfdf9fc5a5a3c6f5dd487d",
+      "text": "WEBSITE REVIEW                                                                              Website checked · 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n\n SEO findings count admitted checks by page, link or asset in the captured scope; they are not a count of fixes.\n\n\n                                      1 page         3 SEO findings      3 topics\n\n\n  Tested page · Mobile lab page\n  No usable scores were available. Ask your website provider to repeat the mobile measurement before drawing\n  conclusions about speed.\n\n\nKey observations\n\n  1 page to review                                             1 page to review\n\n  Preferred page versions                                      Missing search descriptions\n  Example page: Page 000                                       Example page: Page 000\n  These settings can be intentional. The crawl does not        Clear wording can help people distinguish your offers.\n  establish whether Google lists a page.                       Search engines may choose different text.\n  Next step: Tell your website provider which offers           Next step: Review whether these pages belong with\n  should be found in search. Have them check these             the current offers before editing descriptions. Confirm\n  settings before changing anything.                           their purpose with the owner; retain intentional\n                                                               archives.\n\n\n  1 page to review\n  Missing main headings\n  Example page: Page 000\n  Headings help visitors and screen-reader users\n  understand the offer. These observations do not prove\n  a ranking problem.\n  Next step: Ask your editor to check the affected\n  pages. Make the main offer clear and arrange\n  headings in a useful reading order.\n\n\n\n\nLet’s get in touch\nContact us to discuss this review.\n\nSynthetic PDF Review · Example Studio     review@example.test · +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "df3d8a173045513536e0d5f124ff60fa547562ab27d27a477036dfa66a92550e"
+      ],
+      "pdfSha256": "3454fe52a384b12575bfb0709a2a322cdbb92e02a95c65a3984a0326ffdc405c"
+    },
+    {
+      "id": "mobile-en",
+      "pages": 2,
+      "geometry": "Pages:           2\nPage size:       306 x 793.92 pts",
+      "htmlSha256": "184902a110a67a489990aa993877c481839e85be9e5a673d37c3b99d74455e3f",
+      "text": "WEBSITE REVIEW                 Website checked · 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n\n SEO findings count admitted checks by page, link or\n asset in the captured scope; they are not a count of\n fixes.\n\n\n         1 page      3 SEO findings      3 topics\n\n\n\n  Tested page · Mobile lab page\n  No usable scores were available. Ask your website\n  provider to repeat the mobile measurement before\n  drawing conclusions about speed.\n\n\nKey observations\n\n  1 page to review\n  Preferred page versions\n  Example page: Page 000\n  These settings can be intentional. The crawl does\n  not establish whether Google lists a page.\n  Next step: Tell your website provider which offers\n  should be found in search. Have them check these\n  settings before changing anything.\n\n\n  1 page to review\n  Missing search descriptions\n  Example page: Page 000\n  Clear wording can help people distinguish your\n  offers. Search engines may choose different text.\n  Next step: Review whether these pages belong\n  with the current offers before editing descriptions.\n  Confirm their purpose with the owner; retain\n  intentional archives.\n\ffixture.example\n\n\n  1 page to review\n  Missing main headings\n  Example page: Page 000\n  Headings help visitors and screen-reader users\n  understand the offer. These observations do not\n  prove a ranking problem.\n  Next step: Ask your editor to check the affected\n  pages. Make the main offer clear and arrange\n  headings in a useful reading order.\n\n\n\n\nLet’s get in touch\nContact us to discuss this review.\n\n\nSynthetic PDF Review · Example Studio\nreview@example.test · +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   2  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "854bc3de23ee28e8642b5942f6d40f85a2f12535a10ab58528ae716aeffc13ef",
+        "eadeeb8f252c37dbc939e638d4b409ed6ea61cb74b3755f15b97e7a2454bf8a5"
+      ],
+      "pdfSha256": "08941ab010247e9f1bf443a8839834b0fb59c0e8d60d4c86dc43e774773ee49c"
+    },
+    {
+      "id": "a4-one-topic",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "htmlSha256": "8249f4e390fbe8ebab996adb52fdecc8901d6020f91099cdf9628c0816baf250",
+      "text": "WEBSITE REVIEW                                                                            Website checked · 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n\n SEO findings count admitted checks by page, link or asset in the captured scope; they are not a count of fixes.\n\n\n                                       1 page       1 SEO finding       1 topic\n\n\n  Tested page · Mobile lab page\n  No usable scores were available. Ask your website provider to repeat the mobile measurement before drawing\n  conclusions about speed.\n\n\nKey observations\n\n  1 page to review\n\n  Missing search descriptions\n  Example page: Page 000\n  Clear wording can help people distinguish your offers. Search engines may choose different text.\n  Next step: Review whether these pages belong with the current offers before editing descriptions. Confirm their\n  purpose with the owner; retain intentional archives.\n\n\n\n\nLet’s get in touch\nContact us to discuss this review.\n\nSynthetic PDF Review · Example Studio     review@example.test · +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "5db40d7b98edd21a13db144e8c67df6f55a1d4c66e908b10962041a43a9ef646"
+      ],
+      "pdfSha256": "6ae7b24bbe22c5c9d39c9d46b0767cb1556a399b125e0536c3fc796d1d6eb634"
+    },
+    {
+      "id": "a4-two-topics",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "htmlSha256": "0273763888ba6e8863d5f2624cf585d4a85cfa185f40641ae389448f1ed71ebe",
+      "text": "WEBSITE REVIEW                                                                             Website checked · 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n\n SEO findings count admitted checks by page, link or asset in the captured scope; they are not a count of fixes.\n\n\n                                      1 page       2 SEO findings       2 topics\n\n\n  Tested page · Mobile lab page\n  No usable scores were available. Ask your website provider to repeat the mobile measurement before drawing\n  conclusions about speed.\n\n\nKey observations\n\n  1 page to review                                            1 page to review\n\n  Preferred page versions                                     Missing search descriptions\n  Example page: Page 000                                      Example page: Page 000\n  These settings can be intentional. The crawl does not       Clear wording can help people distinguish your offers.\n  establish whether Google lists a page.                      Search engines may choose different text.\n  Next step: Tell your website provider which offers          Next step: Review whether these pages belong with\n  should be found in search. Have them check these            the current offers before editing descriptions. Confirm\n  settings before changing anything.                          their purpose with the owner; retain intentional\n                                                              archives.\n\n\n\n\nLet’s get in touch\nContact us to discuss this review.\n\nSynthetic PDF Review · Example Studio     review@example.test · +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "15068e73c48dbc0b512161c80912a6c194cffb990d1bd9796efc14cd833da142"
+      ],
+      "pdfSha256": "2b2c33e568f9ab190936360739081000fff1405df17ed291b281007f7e91d734"
+    },
+    {
+      "id": "a4-six-topics",
+      "pages": 1,
+      "geometry": "Pages:           1\nPage size:       594.96 x 841.92 pts (A4)",
+      "htmlSha256": "97f9ca2c4061d22f00f427c0277eb97157706b26ff5bbd0711e1284f29adff9c",
+      "text": "WEBSITE REVIEW                                                                               Website checked · 29 Oct 2026\n\n\nfixture.example\nWhat deserves attention\n\n\n SEO findings count admitted checks by page, link or asset in the captured scope; they are not a count of fixes.\n\n\n                                        1 page       6 SEO findings       6 topics\n\n\n  Tested page · Mobile lab page\n\n                                                           39\n\n\n                                                      Performance\n  Some measurements were unavailable.\n\n\nKey observations\n\n Tested page                                                    1 page to review\n Mobile loading performance                                     Preferred page versions\n Example page: Page 000                                         Example page: Page 000\n The tested page scored 39/100 for mobile performance           These settings can be intentional. The crawl does not\n in PageSpeed Insights.                                         establish whether Google lists a page.\n This laboratory score is a reason to investigate, not a        Next step: Tell your website provider which offers\n measurement of lost enquiries or bookings.                     should be found in search. Have them check these\n Next step: Ask your developer to inspect the main              settings before changing anything.\n loading bottlenecks. Check the journey from your main\n offer to enquiry or booking on a phone.\n\n 1 page to review                                               1 page to review\n Missing search descriptions                                    Image links to review\n Example page: Page 000                                         Example page: Page 000\n Clear wording can help people distinguish your offers.         Useful image descriptions support visitors using screen\n Search engines may choose different text.                      readers. Image delivery and layout also deserve a\n Next step: Review whether these pages belong with              check on a phone.\n the current offers before editing descriptions. Confirm        Next step: Ask your developer to check whether these\n their purpose with the owner; retain intentional               image-only links have accessible names.\n archives.\n\n 1 page to review                                               1 page to review\n Missing image dimensions                                       Missing main headings\n Example page: Page 000                                         Example page: Page 000\n Check whether image dimensions are set to help avoid           Headings help visitors and screen-reader users\n unexpected layout shifts.                                      understand the offer. These observations do not prove\n Next step: Ask your developer to check the image               a ranking problem.\n dimensions and layout on the affected pages.                   Next step: Ask your editor to check the affected pages.\n                                                                Make the main offer clear and arrange headings in a\n                                                                useful reading order.\n\n\n\n\nLet’s get in touch\nContact us to discuss this review.\n\nSynthetic PDF Review · Example Studio      review@example.test · +31 20 123 4567\n\f",
+      "urls": "   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000\n   1  Annotation    https://fixture.example/page-000",
+      "pngSha256": [
+        "5cd52d3676c4c8d8ed69b7a5e78a81c30aa11d4a29b24456492a35d382aca9ed"
+      ],
+      "pdfSha256": "804890deaf256812c91023799a51f88197216977c43f7b68e95fea4b6dea2748"
+    }
+  ]
+}

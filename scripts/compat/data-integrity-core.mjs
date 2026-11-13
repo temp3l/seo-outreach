@@ -42,7 +42,7 @@ export async function checkEntry(entry, now=Date.now()) {
    if(JSON.stringify(Object.keys(qualification).sort())!==JSON.stringify(keys.sort()))throw Error('qualification_shape_invalid');
    if(reviewedMode){
     if(!entry.reviewManifest)throw Error('review_manifest_required');
-    const bytes=await load(entry.reviewManifest,16384,true),hash=digest(bytes);
+    const bytes=await load(entry.reviewManifest,16_000_000,true),hash=digest(bytes);
     if(!/^[a-f0-9]{64}$/.test(qualification.reviewedManifestSha256)||hash!==qualification.reviewedManifestSha256)throw Error('review_manifest_hash_mismatch');
     const m=JSON.parse(bytes);
     if(!m||m.schema!=='webcrawl-customer-review-v1'||m.target!==audit.target||m.auditSha256!==auditSha256||m.reportStatus!=='HOLD'||m.outboundApproval!==false||!Array.isArray(m.artifacts)||m.artifacts.length!==2)throw Error('review_manifest_invalid');

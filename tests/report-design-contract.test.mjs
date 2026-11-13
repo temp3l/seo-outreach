@@ -13,8 +13,9 @@ test('approved design lock rejects renderer and reference drift',async()=>{
  try{
   await copyFile(new URL('../report-design.lock.json',import.meta.url),join(root,'report-design.lock.json'));
   for(const f of contract.files){const p=join(root,f.path);await mkdir(dirname(p),{recursive:true});await copyFile(new URL('../'+f.path,import.meta.url),p);}
-  for(const name of ['src/reports/customer.ts','tests/fixtures/report-golden/a4-en-1.png']){
-   const path=join(root,name),bytes=await readFile(path);await writeFile(path,name.endsWith('.ts')?Buffer.from(bytes.toString().replace('background:#102d3a','background:#702d3a')):Buffer.concat([bytes,Buffer.from('changed')]));
+  const revision='docs/pdf-design-versions/customer-pdf-v6-source-accuracy-20261113/report-design.lock.json';await mkdir(dirname(join(root,revision)),{recursive:true});await copyFile(new URL('../'+revision,import.meta.url),join(root,revision));
+  for(const name of ['src/reports/customer.ts','src/reports/summary.ts','src/reports/mobile.ts','tests/fixtures/report-golden/a4-en-1.png']){
+   const path=join(root,name),bytes=await readFile(path);await writeFile(path,name==='src/reports/customer.ts'?Buffer.from(bytes.toString().replace('background:#102d3a','background:#702d3a')):Buffer.concat([bytes,Buffer.from('changed')]));
    await assert.rejects(verifyReportDesign(root),/frozen_pdf_design_changed/);await writeFile(path,bytes);
   }
   assert.equal((await verifyReportDesign(root)).design,CUSTOMER_PDF_DESIGN);

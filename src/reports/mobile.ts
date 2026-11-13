@@ -2,13 +2,11 @@ import type { AuditResult } from '@spora/webcrawl';
 import type { PdfRenderer } from './html.js';
 import type { ReportContact } from './report-contact.js';
 import { renderCustomerSummaryHtml, type CustomerLocale } from './summary.js';
-import { isCustomerReleaseQualified, type CustomerReleaseQualification } from './qualification.js';
+import type { CustomerReleaseQualification } from './qualification.js';
 
 /** Reflow the same evidence and publication decision onto narrow PDF pages. */
 export async function renderMobileCustomerPdf(result: AuditResult, renderer: PdfRenderer, issuer: ReportContact, locale: CustomerLocale, status: 'CLIENT_READY' | 'HOLD', qualification?: CustomerReleaseQualification): Promise<Uint8Array> {
-  const release = status === 'CLIENT_READY' && Boolean(issuer.email || issuer.phone) && isCustomerReleaseQualified(result, qualification);
-  let html = renderCustomerSummaryHtml(result, locale, { issuer, ...(release ? { qualification } : {}) });
-  if (!release) html = html.replace('data-publication-status="PREVIEW"', 'data-publication-status="HOLD"');
+  const html = renderCustomerSummaryHtml(result, locale, { issuer });
   return renderMobileReportHtml(html, renderer);
 }
 

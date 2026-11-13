@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { createEvidenceFixture } from './fixtures/evidence-pack-fixture.mjs';
 import { auditResultSha256 } from '../dist/reports/qualification.js';
+import { createPageDataExport } from '@spora/webcrawl/analysis/page-data';
+import { createCustomerReviewManifest } from '../dist/reports/review.js';
 
 const exec = promisify(execFile);
 const script = new URL('../scripts/compat/release-customer-reports.mjs', import.meta.url).pathname;
@@ -24,20 +26,23 @@ async function setup(root) {
   const a4 = join(root, 'a4.pdf'), mobile = join(root, 'mobile.pdf');
   const pdf1 = Buffer.from('%PDF-1.4\nsynthetic A4 bytes\n'); const pdf2 = Buffer.from('%PDF-1.4\nsynthetic mobile bytes\n');
   await writeFile(files.audit, JSON.stringify(audit), { mode: 0o600 });
-  const review = { schema: 'webcrawl-customer-review-v1', target: audit.target, auditSha256: auditResultSha256(audit), reportStatus: 'HOLD', outboundApproval: false, artifacts: [
-    { role: 'a4', locale: 'en', path: a4, bytes: pdf1.length, sha256: digest(pdf1) },
-    { role: 'mobile', locale: 'en', path: mobile, bytes: pdf2.length, sha256: digest(pdf2) },
-  ] };
+  const review = {...createCustomerReviewManifest(audit,'en',[{role:'a4',path:a4,content:pdf1},{role:'mobile',path:mobile,content:pdf2}]),sourceAuditFileSha256:digest(Buffer.from(JSON.stringify(audit)))};
   const reviewBytes = Buffer.from(`${JSON.stringify(review)}\n`);
   await writeFile(files.review, reviewBytes, { mode: 0o600 });
   const qualification = { decision: 'RELEASE', target: audit.target, auditSha256: auditResultSha256(audit), qualifiedAt: new Date(Date.now() - 20_000).toISOString(), qualifiedBy: 'Synthetic operator reviewer', businessIdentity: 'VERIFIED', coverage: 'ACCEPTED', security: 'CLEARED', reviewedManifestSha256: digest(reviewBytes) };
   await writeFile(files.qualification, JSON.stringify(qualification), { mode: 0o600 });
   await writeFile(a4, pdf1, { mode: 0o600 }); await writeFile(mobile, pdf2, { mode: 0o600 });
   const bin = join(root, 'bin'); await mkdir(bin, { mode: 0o700 });
-  await writeFile(join(bin, 'pdftotext'), '#!/bin/sh\nprintf "Synthetic report fixture.example clean text\\n"\n', { mode: 0o700 });
+  await writeFile(join(bin, 'pdftotext'), '#!/bin/sh\nprintf "Synthetic report fixture.example 1 SEO finding clean text\\n"\n', { mode: 0o700 });
   await writeFile(join(bin, 'pdfinfo'), '#!/bin/sh\nprintf "https://fixture.example/\\n"\n', { mode: 0o700 });
   return { files, review, a4, mobile, bin, audit };
 }
+
+test('direct release script rejects the unreviewed branch before rendering', async () => {
+  const root=await mkdtemp('/tmp/webcrawl-unreviewed-release-');await chmod(root,0o700);
+  try { const data=await setup(root);await assert.rejects(exec(process.execPath,[script,'--audit',data.files.audit,'--qualification',data.files.qualification,'--report-contact-file',join(root,'missing'),'--out',join(root,'out')]),e=>/reviewed_manifest_required/u.test(e.stderr));await assert.rejects(readFile(join(root,'out.release.json')),{code:'ENOENT'}); }
+  finally { await rm(root,{recursive:true,force:true}); }
+});
 
 function qualification(audit, reviewBytes, changes = {}) {
   return { decision: 'RELEASE', target: audit.target, auditSha256: auditResultSha256(audit), qualifiedAt: new Date(Date.now() - 20_000).toISOString(), qualifiedBy: 'Synthetic operator reviewer', businessIdentity: 'VERIFIED', coverage: 'ACCEPTED', security: 'CLEARED', reviewedManifestSha256: digest(reviewBytes), ...changes };
@@ -64,7 +69,7 @@ test('promotes exact reviewed PDF bytes and replays deterministically without re
 });
 
 test('fails closed for mismatched review hash, changed PDF, missing or unsafe qualification, and unsafe PDF mode', async () => {
-  for (const mode of ['wrong-hash', 'changed-pdf', 'missing-qualification', 'unsafe-mode', 'audit-mismatch', 'security-failed']) {
+  for (const mode of ['wrong-hash', 'changed-pdf', 'missing-qualification', 'unsafe-mode', 'audit-mismatch', 'security-failed', 'audit-file-digest', 'triage-tamper']) {
     const root = await mkdtemp('/tmp/webcrawl-reviewed-pdf-negative-'); await chmod(root, 0o700);
     try {
       const data = await setup(root);
@@ -78,6 +83,8 @@ test('fails closed for mismatched review hash, changed PDF, missing or unsafe qu
         await writeFile(data.files.qualification, JSON.stringify(q), { mode: 0o600 });
       }
       if (mode === 'changed-pdf') await writeFile(data.a4, '%PDF-1.4 changed\n', { mode: 0o600 });
+      if (mode === 'audit-file-digest') {const review={...data.review,sourceAuditFileSha256:'0'.repeat(64)};const bytes=Buffer.from(JSON.stringify(review));await writeFile(data.files.review,bytes,{mode:0o600});await writeFile(data.files.qualification,JSON.stringify(qualification(data.audit,bytes)),{mode:0o600});}
+      if (mode === 'triage-tamper') {const review={...data.review,evidenceTriage:[{findingIndex:0,evidenceClassification:'eligible',inCount:true}]};const bytes=Buffer.from(JSON.stringify(review));await writeFile(data.files.review,bytes,{mode:0o600});await writeFile(data.files.qualification,JSON.stringify(qualification(data.audit,bytes)),{mode:0o600});}
       if (mode === 'missing-qualification') await rm(data.files.qualification);
       if (mode === 'unsafe-mode') await chmod(data.mobile, 0o644);
       await assert.rejects(exec(process.execPath, [script, ...options(data.files, join(root, 'release'))], { env: { ...process.env, PATH: `${data.bin}:${process.env.PATH}` } }));
@@ -112,4 +119,27 @@ test('real Chromium review PDFs promote byte-for-byte without launching a render
       assert.equal(digest(bytes), review.artifacts[index].sha256);
     }
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('reviewed release binds page evidence and rejects changed evidence', async () => {
+  const root=await mkdtemp('/tmp/webcrawl-reviewed-evidence-');await chmod(root,0o700);
+  try {
+    const data=await setup(root), audit=data.audit;
+    audit.findings=[{code:'image_alt_missing_or_empty',category:'accessibility',observed:'Image inventory',evidence:[{pageUrl:audit.target,source:'http',observedAt:audit.completedAt,value:1}]}];
+    audit.coverage.findings={records:1,checkCodes:1,affectedPages:1,evidenceOccurrences:1,byCheck:[{code:'image_alt_missing_or_empty',records:1,affectedPages:1,evidenceOccurrences:1}]};
+    await writeFile(data.files.audit,JSON.stringify(audit),{mode:0o600});
+    const pages=audit.coverage.urls.map(row=>({requestedUrl:row.url,finalUrl:row.finalUrl,statusCode:200,contentType:'text/html',fetchedAt:audit.startedAt,responseBytes:50,html:'<main><a href="/next"><img src="/x.png" alt=""></a></main>'}));
+    const pd={...createPageDataExport(pages),target:audit.target,auditStartedAt:audit.startedAt,auditCompletedAt:audit.completedAt,auditSha256:auditResultSha256(audit)};
+    const pagePath=join(root,'page-data.json');await writeFile(pagePath,JSON.stringify(pd),{mode:0o600});
+    const issuer=join(root,'issuer.json');await writeFile(issuer,JSON.stringify({name:'Synthetic Issuer',email:'issuer@example.test'}),{mode:0o600});
+    const prefix=join(root,'prepared'), prepare=new URL('../scripts/compat/prepare-customer-review.mjs',import.meta.url).pathname;
+    await exec(process.execPath,[prepare,'--audit',data.files.audit,'--page-data',pagePath,'--report-contact-file',issuer,'--out',prefix,'--pdf-locale','en']);
+    const reviewPath=prefix+'.review.json', reviewBytes=await readFile(reviewPath),review=JSON.parse(reviewBytes);
+    assert.equal(review.customerObservationCount,1);assert.equal(review.pageEvidencePath,pagePath);
+    await writeFile(data.files.qualification,JSON.stringify(qualification(audit,reviewBytes)),{mode:0o600});
+    await exec(process.execPath,[script,...options({audit:data.files.audit,qualification:data.files.qualification,review:reviewPath},join(root,'approved'))]);
+    await writeFile(pagePath,JSON.stringify({...pd,generatedAt:'2001-01-01T00:00:00.000Z'}),{mode:0o600});
+    await assert.rejects(exec(process.execPath,[script,...options({audit:data.files.audit,qualification:data.files.qualification,review:reviewPath},join(root,'tampered'))]),e=>/review_manifest_mismatch/u.test(e.stderr));
+    await assert.rejects(readFile(join(root,'tampered.release.json')),{code:'ENOENT'});
+  } finally { await rm(root,{recursive:true,force:true}); }
 });

@@ -2,7 +2,7 @@ import { customerPriorityObservation, customerPriorityProjection } from './custo
 import type { AuditResult } from '@spora/webcrawl';
 import { portugueseOpportunities } from './customer-pt.js';
 import { validateReportContact, type ReportContact } from './report-contact.js';
-import { isCustomerReleaseQualified, isReportableEvidenceAdmissible, type CustomerReleaseQualification } from './qualification.js';
+import { isReportableEvidenceAdmissible, type CustomerReleaseQualification } from './qualification.js';
 import { reportPageReference } from './references.js';
 
 function markdownValue(value: string): string {
@@ -11,7 +11,8 @@ function markdownValue(value: string): string {
 
 /** Create a plain-text outreach draft from evidence captured in this audit. */
 export function renderWhatsAppDraft(result: AuditResult, reportAttachment?: string, publicationStatus: 'CLIENT_READY' | 'HOLD' = 'HOLD', qualification?: CustomerReleaseQualification): string {
-  const reportStatus = publicationStatus === 'CLIENT_READY' && isCustomerReleaseQualified(result, qualification) ? 'CLIENT_READY' : 'HOLD';
+  // A caller-supplied status and qualification do not establish a reviewed PDF.
+  const reportStatus = 'HOLD';
   const shareUrl = (raw: string): string | undefined => reportPageReference(raw)?.url;
   const website = markdownValue(shareUrl(result.target) ?? new URL(result.target).origin);
   const host = (() => { try { return new URL(result.target).hostname; } catch { return result.target; } })();
@@ -41,7 +42,7 @@ export function renderWhatsAppDraft(result: AuditResult, reportAttachment?: stri
   // Site evidence establishes formatting/channel observations, never ownership.
   // Keep candidates in the private audit; do not promote one to a send target.
   const contactLine = '- **recipient_review_required:** true\n- **selected_send_target:** null\n- **Recipient decision:** HOLD — verify business ownership, company context and WhatsApp channel in the private contact inventory before selecting a recipient.\n';
-  const attachmentLine = reportAttachment ? `- **Report artifact:** \`${markdownValue(reportAttachment)}\` (${reportStatus === 'CLIENT_READY' ? 'qualified for customer release; recipient and send approval still required' : 'HOLD preview; do not attach to customer message'})\n` : '';
+  const attachmentLine = reportAttachment ? `- **Report artifact:** \`${markdownValue(reportAttachment)}\` (HOLD preview; do not attach to customer message)\n` : '';
   return `# ${markdownValue(host)} — WhatsApp outreach draft
 
 - **Website:** ${website}

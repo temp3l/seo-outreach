@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { auditWebsite, auditWebsiteWithPageData } from '@spora/webcrawl/core/audit';
 import { renderAuditHtml } from '../reports/html.js';
 import { renderOperatorStatusPdf } from '../reports/summary.js';
-import { renderCustomerPdfPair } from '../reports/publication.js';
+import { renderCustomerSummaryPdf } from '../reports/summary.js';
 import { renderMobileCustomerPdf } from '../reports/mobile.js';
 import { withPlaywrightPdfSession } from '../reports/pdf-playwright.js';
 import { withPdfSlot, watchSchedulerLifetime } from './cli/pdf-slots.js';
@@ -18,6 +18,7 @@ import type { CrawlPolicy } from '@spora/webcrawl/core/contracts';
 import type { AuditResult } from '@spora/webcrawl/core/contracts';
 import { isAuditResultRecord } from '@spora/webcrawl/core/audit-validation';
 import { createCustomerReviewManifest } from '../reports/review.js';
+import { withCustomerEvidence } from '../reports/customer-evidence.js';
 import { classifyScanCompletion } from '@spora/webcrawl/core/scan-completion';
 import { projectPageDataForEvidencePack, sanitizeEvidenceUrl, type PageDataExport } from '@spora/webcrawl/analysis/page-data';
 import { DEFAULT_CRAWL_LIMITS } from '@spora/webcrawl/core/defaults';
@@ -185,17 +186,19 @@ async function runCliInner(args: string[], transport: Pick<CrawlConfig, 'request
   }
   progressReporter?.finish();
   let customerPublication: 'CLIENT_READY' | 'HOLD' | undefined;
+  const customerAudit = 'pageData' in auditOutput && resolvedPageDataPath !== undefined
+    ? withCustomerEvidence(result, auditOutput.pageData, { path: resolvedPageDataPath, sha256: createHash('sha256').update(`${JSON.stringify(auditOutput.pageData, null, 2)}\n`).digest('hex') })
+    : result;
   const pdfReports = writePdf || writeOperatorPdf ? await (async () => {
     progressReporter?.begin('pdf');
     const reports = await withPdfSlot(signal => withPlaywrightPdfSession(async renderer => {
       const output: Array<readonly [string, Uint8Array]> = [];
       if (writePdf) {
         if (!issuer) throw new Error('client_report_contact_required');
-        const pair = await renderCustomerPdfPair(result, renderer, issuer);
-        customerPublication = pair.status;
+        customerPublication = 'HOLD';
         output.push(
-          [customerPdfPath, pair[options['pdf-locale']]],
-          [mobilePdfPath, await renderMobileCustomerPdf(result, renderer, issuer, options['pdf-locale'], pair.status)],
+          [customerPdfPath, await renderCustomerSummaryPdf(customerAudit, renderer, { locale: options['pdf-locale'], issuer })],
+          [mobilePdfPath, await renderMobileCustomerPdf(customerAudit, renderer, issuer, options['pdf-locale'], 'HOLD')],
         );
       }
       if (writeOperatorPdf) output.push([operatorPdfPath, await renderOperatorStatusPdf(result, renderer, { locale: options['pdf-locale'] })]);
@@ -219,7 +222,7 @@ async function runCliInner(args: string[], transport: Pick<CrawlConfig, 'request
   if (!isAuditResultRecord(publishedAudit) || sha256Json(publishedAudit) !== sha256Json(result)) throw new Error('audit_json_readback_invalid');
   await writeFile(auditHtmlPath, auditHtml, { mode: 0o600, flag: 'wx' });
   outputs.push(auditHtmlPath); publishedOutputs.push(auditHtmlPath);
-  await writeFile(whatsappDraftPath, renderWhatsAppDraft(result, writePdf ? basename(customerPdfPath) : undefined, customerPublication ?? 'HOLD'), { mode: 0o600, flag: 'wx' });
+  await writeFile(whatsappDraftPath, renderWhatsAppDraft(customerAudit, writePdf ? basename(customerPdfPath) : undefined, customerPublication ?? 'HOLD'), { mode: 0o600, flag: 'wx' });
   outputs.push(whatsappDraftPath); publishedOutputs.push(whatsappDraftPath);
   if ('pageData' in auditOutput && resolvedPageDataPath !== undefined) {
     await writeFile(resolvedPageDataPath, `${JSON.stringify(auditOutput.pageData, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
@@ -239,10 +242,10 @@ async function runCliInner(args: string[], transport: Pick<CrawlConfig, 'request
     }
     if (writePdf) {
       const reviewPath = `${auditJsonPath.slice(0, -5)}.review.json`;
-      const review = createCustomerReviewManifest(result, options['pdf-locale'], [
+      const review = { ...createCustomerReviewManifest(customerAudit, options['pdf-locale'], [
         { role: 'a4', path: customerPdfPath, content: await readFile(customerPdfPath) },
         { role: 'mobile', path: mobilePdfPath, content: await readFile(mobilePdfPath) },
-      ]);
+      ]), sourceAuditFileSha256: createHash('sha256').update(auditJson).digest('hex') };
       const reviewJson = `${JSON.stringify(review, null, 2)}\n`;
       await writeFile(reviewPath, reviewJson, { mode: 0o600, flag: 'wx' });
       publishedOutputs.push(reviewPath); outputs.push(reviewPath);

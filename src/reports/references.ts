@@ -1,3 +1,6 @@
+import { attachedCustomerEvidence } from './customer-evidence.js';
+import { auditResultSha256 } from './qualification.js';
+import { classifyScanCompletion } from '@spora/webcrawl/core/scan-completion';
 import type { AuditFinding, AuditResult } from '@spora/webcrawl';
 
 export type ReportPageReference = Readonly<{ url: string; identity: string; redacted: boolean }>;
@@ -34,6 +37,8 @@ export function reportEvidenceCounts(result: AuditResult, findings = result.find
   records: number; occurrences: number; successfulResponses: number | null;
   analyzedHtmlPages: number | null; rateLimitedResponses: number | null; nonHtmlSkips: number | null; duplicateFinalUrls: number | null;
 }> {
+  const data = attachedCustomerEvidence(result);
+  const analyzedHtmlPages = data?.auditSha256 === auditResultSha256(result) && data.auditStartedAt === result.startedAt && data.auditCompletedAt === result.completedAt ? classifyScanCompletion(result, data).analyzedHtmlPages : null;
   const outcomes = result.coverage?.urls;
   const captured = outcomes?.filter(item => item.outcome === 'captured');
   const successful = captured?.filter(item => item.statusCode !== undefined && item.statusCode >= 200 && item.statusCode < 400);
@@ -45,10 +50,9 @@ export function reportEvidenceCounts(result: AuditResult, findings = result.find
     affectedCapturedUrls: outcomes ? affected.length : null, affectedAssets: assetKeys.size,
     records: findings.length, occurrences: findings.reduce((sum, f) => sum + f.evidence.length, 0),
     successfulResponses: successful?.length ?? null,
-    // Coverage contains response outcomes, not per-page content type or
-    // completed extraction records. A successful response and a complete
-    // capability do not establish how many HTML pages were analyzed.
-    analyzedHtmlPages: null,
+    // Reuse the producer's saved completion contract only with bound page evidence.
+    // A successful response alone never establishes completed HTML analysis.
+    analyzedHtmlPages,
     // Coverage records final URL outcomes, not all physical retry responses.
     rateLimitedResponses: outcomes?.filter(item => item.statusCode === 429).length ?? null,
     nonHtmlSkips: outcomes?.filter(item => item.reason === 'non_html').length ?? null,

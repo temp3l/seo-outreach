@@ -1,3 +1,4 @@
+import {CUSTOMER_REPORT_FRESHNESS_MS} from '../../dist/reports/freshness.js';
 import { registerHooks } from 'node:module';
 
 // Advance the isolated command's clock at the mobile boundary. Keep the actual
@@ -9,7 +10,7 @@ registerHooks({ load(url, context, nextLoad) {
   if (process.env.WEBCRAWL_TEST_RELEASE_CLOCK_PHASE === 'renderer-error') {
     return { ...loaded, source: source.replace('const release =', 'throw new Error("SYNTHETIC_PRIVATE_RENDER_ERROR"); const release =') };
   }
-  const advance = 'Date.now = () => ' + (Date.now() + 25 * 60 * 60_000) + ';';
+  const advance = 'Date.now = () => ' + (Date.now() + CUSTOMER_REPORT_FRESHNESS_MS + 1) + ';';
   const after = process.env.WEBCRAWL_TEST_RELEASE_CLOCK_PHASE === 'after-mobile';
   const marker = after ? 'return renderer(html);' : 'const release =';
   if (!source.includes(marker)) throw new Error('mobile_clock_fixture_boundary_missing');

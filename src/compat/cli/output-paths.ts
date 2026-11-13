@@ -30,7 +30,7 @@ export function planSingleSiteOutputs(args: readonly string[], options: ProfileO
   const explicitPageDataPath = pageDataIndex < 0 ? undefined : args[pageDataIndex + 1];
   if (pageDataIndex >= 0 && (!explicitPageDataPath || explicitPageDataPath.startsWith('--'))) throw new Error('--page-data requires a path');
   if (noPageData && (pageDataIndex >= 0 || includeRawPageData)) throw new Error('--no-page-data cannot be combined with --page-data or --page-data-html');
-  const pageDataPath = resolvePageDataOutputPath(out, resolvedEvidencePackPath !== undefined, noPageData, explicitPageDataPath, includeRawPageData) ?? (options['page-data'] ? `${out}.page-data.json` : undefined);
+  const pageDataPath = resolvePageDataOutputPath(out, resolvedEvidencePackPath !== undefined, noPageData, explicitPageDataPath, includeRawPageData) ?? (options['page-data'] || options.pdf && !args.includes('--no-page-data') ? `${out}.page-data.json` : undefined);
   const resolvedPageDataPath = pageDataPath === undefined ? undefined : resolve(pageDataPath);
   if (args.includes('--pdf') && args.includes('--no-pdf')) throw new Error('--pdf and --no-pdf are mutually exclusive');
   if (args.includes('--operator-pdf') && args.includes('--no-operator-pdf')) throw new Error('--operator-pdf and --no-operator-pdf are mutually exclusive');

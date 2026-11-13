@@ -1,3 +1,4 @@
+import {CUSTOMER_REPORT_FRESHNESS_MS} from '../dist/reports/freshness.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,writeFile,readFile,rm,chmod,link,unlink} from 'node:fs/promises';
@@ -31,7 +32,7 @@ test('real saved PDF producer -> approval -> integrity consumer binds bytes, rej
   const result=await checkEntry(entry);assert.equal(result.release?.status,'CURRENT_QUALIFICATION_VERIFIED',JSON.stringify(result));
   for(const code of ['review_manifest_binding','release_hash_binding','current_customer_qualification'])assert.ok(result.checks.some(c=>c.code===code&&c.status==='PASS'),code);
   assert.equal(result.decision,'HOLD','missing evidence pack/handoff must remain HOLD');
-  const stale=await checkEntry(entry,Date.now()+25*3600000);assert.equal(stale.decision,'HOLD');assert.equal(stale.release.status,'ARCHIVED_OR_UNQUALIFIED');
+  const stale=await checkEntry(entry,Date.now()+CUSTOMER_REPORT_FRESHNESS_MS + 1);assert.equal(stale.decision,'HOLD');assert.equal(stale.release.status,'ARCHIVED_OR_UNQUALIFIED');
   const released=JSON.parse(await readFile(release));assert.equal(released.outboundApproval,false);
   for(let i=0;i<before.length;i++)assert.deepEqual(await readFile(review.artifacts[i].path),before[i]);
   async function rejects(entry,code){const r=await checkEntry(entry);assert.equal(r.decision,'ERROR',JSON.stringify(r));assert.ok(r.checks.some(c=>c.code===code),JSON.stringify(r));return r;}

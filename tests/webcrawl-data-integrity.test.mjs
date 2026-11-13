@@ -1,3 +1,4 @@
+import {CUSTOMER_REPORT_FRESHNESS_MS} from '../dist/reports/freshness.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,writeFile,readFile,rm,symlink} from 'node:fs/promises';
@@ -9,7 +10,7 @@ import {TECHNOLOGY_PROFILE} from '@spora/webcrawl/enrichments/technology';
 import {reviewRow,HANDOFF_SCHEMA} from '../scripts/compat/no-send-handoff-core.mjs';
 import {checkEntry,digest} from '../scripts/compat/data-integrity-core.mjs';
 async function fixture(){
- const root=await mkdtemp('/tmp/webcrawl-integrity-test-');const {audit:a,pageData}=createEvidenceFixture(1);a.crawlSettings.technologyProfile=TECHNOLOGY_PROFILE;
+ const root=await mkdtemp('/tmp/webcrawl-integrity-test-');const {audit:a,pageData}=createEvidenceFixture(1);a.target=a.coverage.urls[0].url;a.crawlSettings.technologyProfile=TECHNOLOGY_PROFILE;
  a.findings=[{code:'missing_meta_description',category:'metadata',observed:'Synthetic missing description',evidence:[{pageUrl:a.coverage.urls[0].url,source:'http',observedAt:a.completedAt}]}];
  a.coverage.findings={records:1,checkCodes:1,affectedPages:1,evidenceOccurrences:1,byCheck:[{code:'missing_meta_description',records:1,affectedPages:1,evidenceOccurrences:1}]};
  const now=Date.parse(a.completedAt)+60000;
@@ -24,7 +25,7 @@ async function fixture(){
 const withFixture=fn=>async()=>{const f=await fixture();try{await fn(f);}finally{await rm(f.root,{recursive:true,force:true});}};
 test('complete synthetic hash chain passes at its explicit observation clock; stale qualification holds',withFixture(async f=>{
  const before=await readFile(f.entry.audit);const result=await checkEntry(f.entry,f.now);assert.equal(result.decision,'PASS',JSON.stringify(result.checks));assert.deepEqual(await readFile(f.entry.audit),before);assert.equal(result.release.status,'CURRENT_QUALIFICATION_VERIFIED');
- const stale=await checkEntry(f.entry,f.now+25*3600000);assert.equal(stale.decision,'HOLD');assert.equal(stale.release.status,'ARCHIVED_OR_UNQUALIFIED');
+ const stale=await checkEntry(f.entry,f.now+CUSTOMER_REPORT_FRESHNESS_MS + 1);assert.equal(stale.decision,'HOLD');assert.equal(stale.release.status,'ARCHIVED_OR_UNQUALIFIED');
 }));
 test('missing provenance and approval remain HOLD; no retrospective profile is minted',withFixture(async f=>{
  delete f.a.crawlSettings.technologyProfile;await f.put(f.entry.audit,f.a);

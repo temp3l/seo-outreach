@@ -1,3 +1,4 @@
+import { CUSTOMER_REPORT_FRESHNESS_MS } from './reports/freshness.js';
 import { canonicalCompanyHost } from './company-host.js';
 export { canonicalCompanyHost, canonicalCampaignKey } from './company-host.js';
 /** A handoff describes one reviewable document. It never grants sender/recipient approval. */
@@ -28,7 +29,7 @@ export function validateDocumentHandoff(value:unknown, now=Date.now()):DocumentH
  try{const u=new URL(String(s.target));if(!['http:','https:'].includes(u.protocol)||u.username||u.password||u.hash||u.href!==s.target||canonicalCompanyHost(i.company)!==canonicalCompanyHost(u.hostname))return fail();}catch{return fail();}
  if(!record(r)||!exact(r,['path','sha256','qualifiedAt','reviewedManifestSha256'])||!validRelativeArtifactPath(r.path)||!sha(r.sha256)||!sha(r.reviewedManifestSha256)||!time(r.qualifiedAt))return fail();
  const started=Date.parse(s.startedAt),completed=Date.parse(s.completedAt),qualified=Date.parse(r.qualifiedAt),skew=600_000;
- if(completed<started||completed>now+skew||started>now+skew||now-started>86_400_000||qualified<completed-skew||qualified>now+skew||qualified-started>86_400_000)return fail();
+ if(completed<started||completed>now+skew||started>now+skew||now-started>=CUSTOMER_REPORT_FRESHNESS_MS||qualified<completed-skew||qualified>now+skew||qualified-started>=CUSTOMER_REPORT_FRESHNESS_MS)return fail();
  if(!record(a)||!exact(a,['role','locale','path','filename','bytes','sha256'])||!['a4','mobile'].includes(String(a.role))||!['en','de'].includes(String(a.locale))||!validRelativeArtifactPath(a.path)||!sha(a.sha256)||!Number.isSafeInteger(a.bytes)||Number(a.bytes)<8||Number(a.bytes)>8*1024*1024||typeof a.filename!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,155}\.pdf$/u.test(a.filename))return fail();
  if(typeof value.message!=='string'||!value.message.trim()||value.message.startsWith('INTERNAL / HOLD')||value.message.length>1000||/[\u0000-\u0008\u000b-\u001f\u007f]/u.test(value.message)||value.message.includes('\r'))return fail();
  return value as unknown as DocumentHandoff;

@@ -1,9 +1,12 @@
 #!/usr/bin/env node
+import { restoreSavedMobileLabEvidence } from '../../dist/reports/performance-evidence.js';
+import { observationScope } from '../../dist/reports/observation-scope.js';
 import { withReleaseUnit } from './customer-release-unit.mjs';
 import { constants } from 'node:fs';
 import { open, lstat, realpath } from 'node:fs/promises';
 import { resolve, dirname, isAbsolute } from 'node:path';
 import { createHash } from 'node:crypto';
+import { gunzipSync } from 'node:zlib';
 import { promisify } from 'node:util';
 import { execFile as execFileCb } from 'node:child_process';
 import { isAuditResultRecord } from '@spora/webcrawl/core/audit-validation';
@@ -15,6 +18,12 @@ import { renderWhatsAppDraft } from '../../dist/reports/whatsapp-draft.js';
 import { withPlaywrightPdfSession } from '../../dist/reports/pdf-playwright.js';
 import { readReportContactFile } from '../../dist/reports/report-contact.js';
 import { reportPageReference } from '../../dist/reports/references.js';
+import { withCustomerEvidence } from '../../dist/reports/customer-evidence.js';
+import { customerPriorityProjection } from '../../dist/reports/customer.js';
+import { sanitizeEvidenceUrl } from '@spora/webcrawl/analysis/page-data';
+import { CUSTOMER_PDF_DESIGN } from '../../dist/reports/design-contract.js';
+import { createCustomerReviewManifest } from '../../dist/reports/review.js';
+import { verifyReportDesign } from '../check-report-design.mjs';
 
 const execFile = promisify(execFileCb);
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -33,6 +42,7 @@ const errorCategories = new Set([
   'report_contact_identity_required', 'invalid_report_contact_email', 'invalid_report_contact_phone', 'invalid_report_contact_website',
   'report_contact_reply_channel_required', 'report_contact_identity_url_not_allowed',
   'pdf_render_timeout', 'pdf_render_aborted', 'pdf_close_timeout', 'client_report_not_ready', 'pdf_session_closed',
+  'reviewed_manifest_required',
 ]);
 function errorCategory(error) {
   const category = error instanceof Error ? error.message.split(':', 1)[0] : '';
@@ -61,6 +71,7 @@ function parseArgs(args) {
     values.set(flag, args[++i]);
   }
   const reviewMode = values.has('--review-manifest');
+  if (!reviewMode) throw new Error('reviewed_manifest_required');
   for (const key of ['--audit', '--qualification', '--out', ...(reviewMode ? [] : ['--report-contact-file'])]) if (!values.has(key)) throw new Error('missing_required_option');
   if (reviewMode && (values.has('--report-contact-file') || values.has('--pdf-locale'))) throw new Error('invalid_options');
   const locale = values.get('--pdf-locale') ?? 'en';
@@ -100,10 +111,11 @@ async function readPrivate(path, limit) {
 }
 
 async function runReviewed(options) {
+  await verifyReportDesign();
   const [auditBytes, qualificationBytes, reviewBytes] = await Promise.all([
-    readPrivate(options.audit, AUDIT_LIMIT), readPrivate(options.qualification, QUALIFICATION_LIMIT), readPrivate(options.reviewManifest, 16_384),
+    readPrivate(options.audit, AUDIT_LIMIT), readPrivate(options.qualification, QUALIFICATION_LIMIT), readPrivate(options.reviewManifest, 16_000_000),
   ]);
-  const audit = parseInputJson(auditBytes, 'audit_json_invalid');
+  let audit = parseInputJson(auditBytes, 'audit_json_invalid');
   const qualification = parseInputJson(qualificationBytes, 'qualification_json_invalid');
   const review = parseInputJson(reviewBytes, 'review_manifest_invalid');
   if (!isAuditResultRecord(audit)) throw new Error('audit_schema_invalid');
@@ -112,11 +124,23 @@ async function runReviewed(options) {
     || JSON.stringify(Object.keys(qualification).sort()) !== JSON.stringify(qKeys)
     || qualification.reviewedManifestSha256 !== sha256(reviewBytes)) throw new Error('review_manifest_mismatch');
   const { reviewedManifestSha256, ...baseQualification } = qualification;
-  if (!isCustomerReleaseQualified(audit, baseQualification)) throw new Error('qualification_invalid');
   if (!review || typeof review !== 'object' || Array.isArray(review)
-    || review.schema !== 'webcrawl-customer-review-v1' || review.target !== audit.target
-    || review.auditSha256 !== auditResultSha256(audit) || review.reportStatus !== 'HOLD' || review.outboundApproval !== false
+    || review.schema !== 'webcrawl-customer-review-v1' || review.design !== CUSTOMER_PDF_DESIGN || review.target !== audit.target
+    || review.auditSha256 !== auditResultSha256(audit) || review.sourceAuditFileSha256 !== sha256(auditBytes) || review.reportStatus !== 'HOLD' || review.outboundApproval !== false
     || !Array.isArray(review.artifacts) || review.artifacts.length !== 2) throw new Error('review_manifest_invalid');
+  let pageEvidenceBytes;
+  if (review.pageEvidenceSha256 !== null) {
+    if (typeof review.pageEvidenceSha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(review.pageEvidenceSha256) || typeof review.pageEvidencePath !== 'string' || !isAbsolute(review.pageEvidencePath) || typeof review.pageEvidenceFileSha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(review.pageEvidenceFileSha256)) throw new Error('review_manifest_invalid');
+    pageEvidenceBytes = await readPrivate(review.pageEvidencePath, AUDIT_LIMIT);
+    if (sha256(pageEvidenceBytes) !== review.pageEvidenceFileSha256) throw new Error('review_manifest_mismatch');
+    let raw; try { raw = pageEvidenceBytes[0]===0x1f && pageEvidenceBytes[1]===0x8b ? gunzipSync(pageEvidenceBytes,{maxOutputLength:AUDIT_LIMIT}) : pageEvidenceBytes; } catch { throw new Error('review_manifest_invalid'); }
+    const data = parseInputJson(raw, 'review_manifest_invalid');
+    if (!data || data.schemaVersion !== '1' || !Array.isArray(data.pages) || data.pages.length > 10_000 || sha256(Buffer.from(JSON.stringify(data))) !== review.pageEvidenceSha256 || data.auditSha256 !== auditResultSha256(audit) || data.target !== sanitizeEvidenceUrl(audit.target) || data.auditStartedAt !== audit.startedAt || data.auditCompletedAt !== audit.completedAt) throw new Error('review_manifest_mismatch');
+    audit = withCustomerEvidence(audit, data, { path: review.pageEvidencePath, sha256: review.pageEvidenceFileSha256 });
+  } else if (review.pageEvidencePath !== undefined || review.pageEvidenceFileSha256 !== undefined) throw new Error('review_manifest_invalid');
+  await restoreSavedMobileLabEvidence(audit, review.mobileLabEvidence);
+  if (!Number.isSafeInteger(review.customerObservationCount) || review.customerObservationCount < 0 || review.customerObservationUnit !== 'deduplicated admitted checks by page, link destination or asset' || review.customerObservationCount !== customerPriorityProjection(audit).deduplicatedIssues) throw new Error('review_manifest_mismatch');
+  if (!isCustomerReleaseQualified(audit, baseQualification)) throw new Error('qualification_invalid');
   const roles = new Set(); const paths = new Set(); const locale = review.artifacts[0]?.locale;
   if (!['en', 'de'].includes(locale)) throw new Error('review_manifest_invalid');
   for (const artifact of review.artifacts) {
@@ -134,6 +158,8 @@ async function runReviewed(options) {
     if (bytes.length !== artifact.bytes || sha256(bytes) !== artifact.sha256) throw new Error('review_artifact_invalid');
     if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('review_pdf_invalid');
     const { stdout } = await execFile('pdftotext', ['-layout', artifact.path, '-'], { maxBuffer: 4 * 1024 * 1024, timeout: 30_000 }).catch(() => { throw new Error('review_pdf_invalid'); });
+    const countPattern = new RegExp(`\\b${review.customerObservationCount}\\s+${locale === 'de' ? 'SEO-Befunde?' : 'SEO findings?'}\\b`, 'u');
+    if (!countPattern.test(stdout)) throw new Error('review_pdf_content_invalid');
     const { stdout: urls } = await execFile('pdfinfo', ['-url', artifact.path], { maxBuffer: 1 * 1024 * 1024, timeout: 30_000 }).catch(() => { throw new Error('review_pdf_invalid'); });
     const annotatedHosts = [...urls.matchAll(/https?:\/\/[^\s)<>"']+/giu)].flatMap(match => {
       try { return [new URL(match[0]).hostname.toLowerCase()]; } catch { return []; }
@@ -141,13 +167,20 @@ async function runReviewed(options) {
     if (!stdout.trim() || /\bHOLD\b/u.test(stdout) || !annotatedHosts.includes(host.toLowerCase())) throw new Error('review_pdf_content_invalid');
     reviewedBytes.set(artifact.path, bytes);
   }
+  const expectedReview = createCustomerReviewManifest(audit, locale, review.artifacts.map(artifact => ({ role: artifact.role, path: artifact.path, content: reviewedBytes.get(artifact.path) })));
+  if (review.rawFindingRecords !== expectedReview.rawFindingRecords || review.customerAffectedCapturedUrls !== expectedReview.customerAffectedCapturedUrls || review.evidenceTriageOmitted !== expectedReview.evidenceTriageOmitted || review.evidenceTriageLegend !== expectedReview.evidenceTriageLegend || JSON.stringify(review.evidenceTriage) !== JSON.stringify(expectedReview.evidenceTriage)) throw new Error('review_manifest_mismatch');
+  if (review.observationAccounting !== undefined && JSON.stringify(review.observationAccounting) !== JSON.stringify({raw:observationScope(audit,audit.findings),admitted:observationScope(audit,customerPriorityProjection(audit,locale).countedFindings)})) throw new Error('review_manifest_mismatch');
+  if (review.admittedEvidenceReferences !== undefined && (JSON.stringify(review.admittedEvidenceReferences) !== JSON.stringify(expectedReview.admittedEvidenceReferences) || review.admittedEvidenceReferencesOmitted !== expectedReview.admittedEvidenceReferencesOmitted)) throw new Error('review_manifest_mismatch');
+  if ((review.scanCoverageStatus !== undefined || review.scanExecutionStatus !== undefined) && (review.scanCoverageStatus !== expectedReview.scanCoverageStatus || review.scanExecutionStatus !== expectedReview.scanExecutionStatus)) throw new Error('review_manifest_mismatch');
   // Extraction helpers may take time. Recheck all inputs and qualification
   // freshness immediately before recording release state.
   const [auditNow, qualificationNow, reviewNow] = await Promise.all([
-    readPrivate(options.audit, AUDIT_LIMIT), readPrivate(options.qualification, QUALIFICATION_LIMIT), readPrivate(options.reviewManifest, 16_384),
+    readPrivate(options.audit, AUDIT_LIMIT), readPrivate(options.qualification, QUALIFICATION_LIMIT), readPrivate(options.reviewManifest, 16_000_000),
   ]);
   if (!auditNow.equals(auditBytes) || !qualificationNow.equals(qualificationBytes) || !reviewNow.equals(reviewBytes)
     || !isCustomerReleaseQualified(audit, baseQualification)) throw new Error('review_manifest_mismatch');
+  await restoreSavedMobileLabEvidence(audit, review.mobileLabEvidence);
+  if (pageEvidenceBytes && !(await readPrivate(review.pageEvidencePath, AUDIT_LIMIT)).equals(pageEvidenceBytes)) throw new Error('review_manifest_mismatch');
   for (const artifact of review.artifacts) {
     const current = await readPrivate(artifact.path, 50_000_000);
     if (!current.equals(reviewedBytes.get(artifact.path))) throw new Error('review_artifact_invalid');
@@ -298,7 +331,7 @@ async function run(options) {
 
 try {
   const options = parseArgs(process.argv.slice(2));
-  const result = options.reviewMode ? await runReviewed(options) : await run(options);
+  const result = await runReviewed(options);
   process.stdout.write(`${JSON.stringify({ result: 'LOCAL_REPORT_RELEASE_COMPLETE', manifest: result.manifestPath, reportStatus: result.reportStatus, artifacts: result.artifacts })}\n`);
 } catch (error) {
   process.stderr.write(`release_failed: ${errorCategory(error)}\n`);

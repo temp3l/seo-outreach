@@ -4,6 +4,7 @@ import { hasIncompleteCrawl } from '@spora/webcrawl/evidence';
 /** A bounded scope statement; optional checks never imply a full-site audit. */
 export function customerScopeDisclosure(result: AuditResult, locale: 'en' | 'de' | 'pt-BR'): string {
   const partial = hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls)
+    || result.crawl.limitations.includes('content_inspection_incomplete')
     || Object.values(result.coverage?.checks ?? {}).some(check => check.status !== 'complete' && check.status !== 'disabled');
   if (!partial) return '';
   const unattempted = result.crawl.unattempted;

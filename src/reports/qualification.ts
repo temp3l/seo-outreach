@@ -1,3 +1,4 @@
+import { CUSTOMER_REPORT_FRESHNESS_MS } from './freshness.js';
 import { createHash } from 'node:crypto';
 import type { AuditFinding, AuditResult, CrawlUrlOutcome, FindingEvidence } from '@spora/webcrawl';
 import { isAuditResultRecord } from '@spora/webcrawl/evidence';
@@ -20,7 +21,7 @@ export const reportableCodes = new Set([
   'missing_meta_description', 'meta_description_length', 'duplicate_meta_description_across_pages',
   'duplicate_title_across_pages', 'title_long', 'image_file_too_large', 'images_missing_alt',
   'missing_image_alt', 'image_alt_missing_or_empty', 'images_missing_dimensions', 'missing_h1',
-  'heading_hierarchy_skip', 'pagespeed_category_score',
+  'heading_hierarchy_skip', 'pagespeed_category_score', 'invalid_canonical', 'conflicting_canonicals',
 ]);
 const skew = 5 * 60_000;
 
@@ -154,7 +155,7 @@ export function assessCustomerReportReadiness(result: AuditResult): CustomerRepo
   const selectedTopics = customerPriorityProjection(result).selected.length;
   const blockers = selectedTopics ? [] : ['no_supported_customer_findings'];
   const warnings: string[] = [];
-  if (hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls)) warnings.push('captured_scope_only');
+  if (hasIncompleteCrawl(result.crawl, result.findings, result.coverage?.urls) || result.crawl.limitations.includes('content_inspection_incomplete')) warnings.push('captured_scope_only');
   if (Object.values(result.coverage?.checks ?? {}).some(check => check.status !== 'complete' && check.status !== 'disabled')) warnings.push('check_coverage_gaps');
   if (result.findings.some(finding => reportableCodes.has(finding.code) && !isReportableEvidenceAdmissible(result, finding))) warnings.push('unsupported_findings_omitted');
   return { status: blockers.length ? 'BLOCKED' : 'READY_FOR_REVIEW', blockers, warnings, selectedTopics };
@@ -171,6 +172,6 @@ export function isCustomerReleaseQualified(result: AuditResult, value: unknown, 
     || typeof q.qualifiedBy !== 'string' || q.qualifiedBy.trim().length < 2 || q.qualifiedBy.length > 120 || typeof q.qualifiedAt !== 'string') return false;
   const started = time(result.startedAt), completed = time(result.completedAt), qualified = time(q.qualifiedAt);
   if (![started, completed, qualified].every(Number.isFinite) || completed < started || completed > now + skew
-    || qualified < completed - skew || qualified > now + skew || now - started > 24 * 60 * 60_000 || qualified - started > 24 * 60 * 60_000) return false;
+    || qualified < completed - skew || qualified > now + skew || now - started >= CUSTOMER_REPORT_FRESHNESS_MS || qualified - started >= CUSTOMER_REPORT_FRESHNESS_MS) return false;
   return assessCustomerReportReadiness(result).status === 'READY_FOR_REVIEW';
 }

@@ -17,12 +17,12 @@
     {
       "path": "src/reports/mobile.ts",
       "kind": "file",
-      "sha256": "349d234e7d847edc61891b3febb832f9bf1dd58c3eb436acaceaee77d7e13196"
+      "sha256": "4937e140131032de89a57e9e2927d4c7fb2faaf148e6229d7e04c88f8d7a02a6"
     },
     {
       "path": "src/reports/summary.ts",
       "kind": "file",
-      "sha256": "8777dce4b0a453d1dd21936a6261bb64bc9664d38435aec9bb7db212bff8745c"
+      "sha256": "4c9c227b16feec69819ef6a07ab44161aa9c050e3d4314a1037c648fd767bedd"
     },
     {
       "path": "src/reports/pdf-playwright.ts",
@@ -37,12 +37,12 @@
     {
       "path": "scripts/check-report-visuals.mjs",
       "kind": "file",
-      "sha256": "4ff6d8c9398932eccfd0812ca9c70f994af1a732cc2c98796584223015eebaf8"
+      "sha256": "b00102aee514e750a93cbd17c1f099fe696eab465ee46deb6cb624e05fc6ed32"
     },
     {
       "path": "tests/report-design-contract.test.mjs",
       "kind": "file",
-      "sha256": "ea1bccb1599fdbeb48511fa3cb0843b26039559db1dfee7641567c7c1a006ed7"
+      "sha256": "5631d18550ab537d7de07a4ae945c75f253ebe5166e90d8f3fde8e950cb2094f"
     },
     {
       "path": "tests/report-design-visual.test.mjs",
@@ -202,7 +202,7 @@
     {
       "path": "scripts/check-report-design.mjs",
       "kind": "file",
-      "sha256": "121c86deeb33bb5cd1a30ef0f71271b28d55490b1979a0301a3a3435f8f9b304"
+      "sha256": "ed05e7c50dfb591900761c9e5cc0c99a884544bef65ab12c8d367c470403bcec"
     },
     {
       "path": "src/reports/issue-counts.ts",
@@ -273,8 +273,20 @@
       "path": "docs/pdf-design-approved/customer-pdf-v6-20261106/WC-015-good-vibes-kiteschool/report.pdf",
       "kind": "file",
       "sha256": "5587f869372b43b782a4e4ae2392be2275b997dc297d3a812999f8d348e5f003"
+    },
+    {
+      "path": "docs/pdf-design-approval.json",
+      "kind": "file",
+      "sha256": "6befad2022120c747596cef6b02d7f0deb40d120f68ebb9602ff6a0ba9e1667d"
+    },
+    {
+      "path": "docs/pdf-design-versions/customer-pdf-v6-20261106/report-design.lock.json",
+      "kind": "file",
+      "sha256": "b077ab04973d6d3ad5d7859f184c2582b9b068e770bf7b6c9a5c4d2e20f0aa8e"
     }
   ],
-  "status": "APPROVED_FROZEN",
-  "approvedAt": "2026-11-06T11:04:40.586160+00:00"
+  "status": "SOURCE_REVISION_AUTHORIZED",
+  "approvedAt": "2026-11-06T11:04:40.586160+00:00",
+  "sourceIntegrityRevision": "customer-pdf-v6-source-accuracy-20261113",
+  "sourceIntegrityAuthority": "User authorized a separate source-only integrity lock on 2026-11-13; original approved v6 lock and visual references remain unchanged. No report or outbound approval."
 }

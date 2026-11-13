@@ -19,7 +19,7 @@ const USAGE = [
   'seo-outreach analyze --input <file> --out <directory> [--locale en|es|de|pt-BR] [--recorded <file>] [--crm-existing <prospects.json>] [--seller-name <name> [--seller-location <location>]] [--report-contact-file <private-json>] [--outreach-context <file>] [--dry-run] [--paid-call --provider-config <file> --state <file> --batch-id <id>]',
   'seo-outreach batch --manifest <file> --out <directory> [--locale en|es|de|pt-BR] [--crm-existing <prospects.json>] [--seller-name <name> [--seller-location <location>]] [--report-contact-file <private-json>] [--outreach-context <file>] [--dry-run] [--paid-call --provider-config <file> --state <file> --batch-id <id>]',
   'seo-outreach render --analysis <file> --out <directory> [--dry-run] (internal text PDFs only; customer PDFs: reports prepare/release)',
-  'seo-outreach reports prepare --audit <json> --report-contact-file <private-json> --out <prefix> [--pdf-locale en|de]',
+  'seo-outreach reports prepare --audit <json> --report-contact-file <private-json> --out <prefix> [--page-data <json-or-gzip>] [--psi-response <saved-json>] [--pdf-locale en|de]',
   'seo-outreach reports release --audit <json> --qualification <json> --review-manifest <json> --out <prefix>',
   'seo-outreach reports handoff --audit <json> --release <json> --message-file <txt> --company <id> --branch <id> --campaign <id> --out <json>',
   'seo-outreach --help'
